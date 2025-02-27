@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archive>
+    <dir sourceOnDisk="/workspaces/liberty-rest-app/liberty-rest-app/src/main/webapp" targetInArchive="/"/>
+    <dir sourceOnDisk="/workspaces/liberty-rest-app/liberty-rest-app/target/classes" targetInArchive="/WEB-INF/classes"/>
+    <file sourceOnDisk="/workspaces/liberty-rest-app/liberty-rest-app/target/tmp/META-INF/MANIFEST.MF" targetInArchive="/META-INF/MANIFEST.MF"/>
+</archive>

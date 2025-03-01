@@ -1,0 +1,15 @@
+<server description="MicroProfile Tutorial Liberty Server">
+    <featureManager>
+        <feature>restfulWS-3.1</feature>
+        <feature>jsonb-3.0</feature>
+    </featureManager>
+
+    <httpEndpoint httpPort="${default.http.port}" httpsPort="${default.https.port}"
+                  id="defaultHttpEndpoint" host="*" />
+    <webApplication location="mp-ecomm-store.war" contextRoot="${app.context.root}"/>
+
+    <mpMetrics authentication="false" />
+    <logging traceSpecification="com.ibm.ws.microprofile.health.*=all" />
+    
+    <variable name="io_openliberty_guides_system_inMaintenance" value="false" />
+</server>

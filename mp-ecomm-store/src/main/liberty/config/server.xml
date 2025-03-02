@@ -9,6 +9,7 @@
         <feature>mpHealth</feature>
         <feature>mpConfig</feature>
         <feature>mpMetrics</feature>
+        <feature>mpOpenAPI</feature>
     </featureManager>
 
     <httpEndpoint httpPort="${default.http.port}" httpsPort="${default.https.port}"

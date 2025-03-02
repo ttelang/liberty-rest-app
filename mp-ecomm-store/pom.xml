@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://www.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
@@ -10,14 +9,13 @@
   <packaging>war</packaging>
 
   <properties>
-    <openliberty.maven.version>3.10.1</openliberty.maven.version>
-    
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    
+ 
     <!-- Setting the source and target of the Java Compiler -->
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
+
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     
     <!-- Liberty configuration -->
     <liberty.var.default.http.port>5050</liberty.var.default.http.port>
@@ -27,6 +25,7 @@
   </properties>
 
   <dependencies>
+    <!-- Provided dependencies -->
     <!-- Add Lombok dependency -->
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -51,22 +50,6 @@
       <type>pom</type>
       <scope>provided</scope>
     </dependency>
-
-    <!-- JUnit Jupiter API for writing tests -->
-    <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-api</artifactId>
-        <version>5.8.2</version>
-        <scope>test</scope>
-    </dependency>
-    
-    <!-- JUnit Jupiter Engine for running tests -->
-    <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-engine</artifactId>
-        <version>5.8.2</version>
-        <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>
@@ -76,7 +59,7 @@
       <plugin>
         <groupId>io.openliberty.tools</groupId>
         <artifactId>liberty-maven-plugin</artifactId>
-        <version>${openliberty.maven.version}</version>
+        <version>3.11.2</version>
         <configuration>
             <serverName>mpServer</serverName>
         </configuration>
@@ -85,27 +68,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-war-plugin</artifactId>
-        <version>3.3.2</version>
-      </plugin>
-
-      <!-- Plugin to run unit tests -->
-      <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.0.0</version>
-      </plugin>
-      
-      <!-- Plugin to run functional tests -->
-      <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-failsafe-plugin</artifactId>
-          <version>3.0.0</version>
-          <configuration>
-              <systemPropertyVariables>
-                  <http.port>${liberty.var.default.http.port}</http.port>
-                  <war.name>${liberty.var.app.context.root}</war.name>
-              </systemPropertyVariables>
-          </configuration>
+        <version>3.4.0</version>
       </plugin>
     </plugins>
   </build>

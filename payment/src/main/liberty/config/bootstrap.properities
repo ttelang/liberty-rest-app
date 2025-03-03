@@ -1,0 +1,2 @@
+# Logging configuration
+com.ibm.ws.logging.console.log.level=INFO

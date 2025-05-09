@@ -7,9 +7,17 @@
 
 	"features": {
 		"ghcr.io/devcontainers/features/java:1": {
-			"version": "none",
-			"installMaven": "true",
-			"installGradle": "false"
+			"installMaven": true,
+			"version": "21",
+			"jdkDistro": "ms",
+			"gradleVersion": "latest",
+			"mavenVersion": "latest",
+			"antVersion": "latest",
+			"groovyVersion": "latest"
+		},
+		"ghcr.io/ebaskoro/devcontainer-features/sdkman:1": {
+			"candidate": "java",
+			"version": "latest"
 		}
 	},
 

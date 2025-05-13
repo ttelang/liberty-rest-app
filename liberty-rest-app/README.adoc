@@ -22,6 +22,25 @@ This project includes a GitHub Codespace configuration with:
 * Maven build tools
 * VS Code extensions for Java, MicroProfile, and GitHub Copilot
 
+=== Switching Java Versions
+
+The development container comes with SDKMAN installed, which allows easy switching between Java versions:
+
+[source,bash]
+----
+# List installed Java versions
+sdk list java | grep -E ".*\s+installed"
+
+# Switch to JDK 17 for the current shell session
+sdk use java 17.0.15-ms
+
+# Make JDK 17 the default for all sessions
+sdk default java 17.0.15-ms
+
+# Verify the current Java version
+java -version
+----
+
 == Project Structure
 
 [source]

@@ -13,6 +13,6 @@ public class HelloWorldResource {
     @GET
     @Produces(MediaType.TEXT_PLAIN)
     public String sayHello() {
-        return "Hello, Open Liberty with GitHub Codespaces, JDK 21, MicroProfile 6.0, Jakarta EE 10!";
+        return "Hello, Open Liberty with GitHub Codespaces, JDK 17, MicroProfile 6.1, Jakarta EE 10!";
     }
 }

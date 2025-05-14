@@ -196,7 +196,11 @@ void testGetAllProducts() {
 
 === Resource Layer Testing
 
-Resource layer tests verify the REST endpoints and HTTP responses:
+The project uses two approaches for testing the resource layer:
+
+==== Integration Testing
+
+This approach tests the resource layer with the actual service implementation:
 
 [source,java]
 ----
@@ -315,14 +319,6 @@ The project includes several key dependencies:
     <groupId>org.junit.jupiter</groupId>
     <artifactId>junit-jupiter</artifactId>
     <version>5.9.3</version>
-    <scope>test</scope>
-</dependency>
-
-<!-- Mockito for mocking in tests -->
-<dependency>
-    <groupId>org.mockito</groupId>
-    <artifactId>mockito-core</artifactId>
-    <version>5.3.1</version>
     <scope>test</scope>
 </dependency>
 

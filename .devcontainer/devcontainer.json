@@ -41,7 +41,9 @@
 			"extensions": [
 				"vscjava.vscode-java-pack", 
 				"github.copilot", 
-				"microprofile-community.vscode-microprofile-pack"
+				"microprofile-community.vscode-microprofile-pack",
+				"asciidoctor.asciidoctor-vscode",
+				"ms-vscode-remote.remote-containers"
 			]
 		}
 	}

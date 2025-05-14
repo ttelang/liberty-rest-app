@@ -382,7 +382,3 @@ This project demonstrates several Java enterprise development best practices:
 * Implement MicroProfile Metrics for monitoring
 * Implement MicroProfile Fault Tolerance for resilience
 * Add authentication and authorization
-
-== License
-
-This project is licensed under the terms of the MIT license.

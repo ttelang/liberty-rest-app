@@ -1,6 +1,7 @@
 package io.microprofile.tutorial.store.product.service;
 
 import io.microprofile.tutorial.store.product.entity.Product;
+import io.microprofile.tutorial.store.interceptor.Logged;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.Optional;
 import java.util.logging.Logger;
 
 @ApplicationScoped
+@Logged
 public class ProductService {
     private static final Logger LOGGER = Logger.getLogger(ProductService.class.getName());
     private List<Product> products = new ArrayList<>();

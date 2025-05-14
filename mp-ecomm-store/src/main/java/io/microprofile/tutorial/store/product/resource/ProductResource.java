@@ -2,6 +2,7 @@ package io.microprofile.tutorial.store.product.resource;
 
 import io.microprofile.tutorial.store.product.entity.Product;
 import io.microprofile.tutorial.store.product.service.ProductService;
+import io.microprofile.tutorial.store.interceptor.Logged;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -13,6 +14,7 @@ import java.util.logging.Logger;
 
 @ApplicationScoped
 @Path("/products")
+@Logged
 public class ProductResource {
 
     private static final Logger LOGGER = Logger.getLogger(ProductResource.class.getName());

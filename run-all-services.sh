@@ -19,6 +19,9 @@ cd payment && mvn clean package && cd ..
 echo "Building Shopping Cart Service..."
 cd shoppingcart && mvn clean package && cd ..
 
+echo "Building Shipment Service..."
+cd shipment && mvn clean package && cd ..
+
 # Start all services using docker-compose
 echo "Starting all services with Docker Compose..."
 docker-compose up -d
@@ -30,3 +33,4 @@ echo "- Order Service: http://localhost:8050/order"
 echo "- Catalog Service: http://localhost:5050/catalog"
 echo "- Payment Service: http://localhost:9050/payment"
 echo "- Shopping Cart Service: http://localhost:4050/shoppingcart"
+echo "- Shipment Service: http://localhost:8060/shipment"

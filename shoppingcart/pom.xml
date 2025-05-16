@@ -5,17 +5,16 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>io.microprofile</groupId>
-  <artifactId>user</artifactId>
+  <artifactId>shoppingcart</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>war</packaging>
 
-  <name>user-management</name>
+  <name>shopping-cart-service</name>
   <url>https://microprofile.io</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
+    <maven.compiler.release>17</maven.compiler.release>
     <jakarta.jakartaee-api.version>10.0.0</jakarta.jakartaee-api.version>
     <microprofile.version>6.1</microprofile.version>
     <liberty.version>23.0.0.3</liberty.version>
@@ -48,7 +47,7 @@
   </dependencies>
 
   <build>
-    <finalName>user</finalName>
+    <finalName>shoppingcart</finalName>
     <plugins>
       <!-- Liberty Maven Plugin -->
       <plugin>
@@ -56,11 +55,11 @@
         <artifactId>liberty-maven-plugin</artifactId>
         <version>3.8.2</version>
         <configuration>
-          <serverName>userServer</serverName>
+          <serverName>shoppingcartServer</serverName>
           <include>runnable</include>
           <serverStartTimeout>120</serverStartTimeout>
           <bootstrapProperties>
-            <app.context.root>/user</app.context.root>
+            <app.context.root>/shoppingcart</app.context.root>
           </bootstrapProperties>
         </configuration>
       </plugin>

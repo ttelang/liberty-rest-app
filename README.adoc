@@ -12,6 +12,11 @@ This project demonstrates a microservices-based e-commerce application built wit
 [.lead]
 A practical demonstration of MicroProfile capabilities for building cloud-native Java microservices.
 
+[IMPORTANT]
+====
+This project is part of the official MicroProfile 6.1 API Tutorial.
+====
+
 See link:service-interactions.adoc[Service Interactions] for details on how the services work together.
 
 == Services
@@ -33,6 +38,15 @@ The application is split into the following microservices:
 
 |Catalog Service  
 |Provides product information, categories, and search capabilities
+
+|Shopping Cart Service
+|Manages user shopping cart items and temporary product storage
+
+|Shipment Service
+|Handles shipping orders, tracking, and delivery status updates
+
+|Payment Service
+|Processes payments and manages payment methods and transactions
 |===
 
 == Technology Stack

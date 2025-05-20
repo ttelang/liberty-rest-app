@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server description="Shipment Service">
+    <!-- Enable features -->
+    <featureManager>
+        <feature>jakartaee-10.0</feature>
+        <feature>microProfile-6.1</feature>
+    </featureManager>
+
+    <!-- Server configuration -->
+    <httpEndpoint id="defaultHttpEndpoint" 
+                  host="*" 
+                  httpPort="8060" 
+                  httpsPort="9060"/>
+
+    <!-- Application configuration -->
+    <webApplication location="shipment.war" contextRoot="/shipment">
+        <classloader apiTypeVisibility="+third-party"/>
+    </webApplication>
+
+    <!-- Set application logging level -->
+    <logging traceSpecification="io.microprofile.tutorial.store.shipment.*=info"/>
+    
+    <!-- Default SSL configuration (enabled in Docker) -->
+    <ssl id="defaultSSLConfig" keyStoreRef="defaultKeyStore" trustStoreRef="defaultTrustStore"/>
+    <keyStore id="defaultKeyStore" password="Liberty"/>
+    <keyStore id="defaultTrustStore" password="Liberty"/>
+</server>

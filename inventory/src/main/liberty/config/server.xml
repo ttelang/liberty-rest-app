@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server description="Inventory Management Server">
+
+    <!-- Enable features -->
+    <featureManager>
+        <feature>jakartaee-10.0</feature>
+        <feature>microProfile-6.1</feature>
+    </featureManager>
+
+    <!-- To access this server from a remote client, add a host attribute to the following element -->
+    <httpEndpoint id="defaultHttpEndpoint"
+                  host="*"
+                  httpPort="7050"
+                  httpsPort="7051" />
+                  
+    <!-- Automatically expand WAR files and EAR files -->
+    <applicationManager autoExpand="true" />
+
+    <!-- Define the application -->
+    <webApplication id="inventory"
+                    name="inventory"
+                    location="inventory.war"
+                    contextRoot="/inventory" />
+
+    <!-- Default SSL configuration enables trust for default certificates from the Java runtime -->
+    <ssl id="defaultSSLConfig" trustDefaultCerts="true" />
+    
+    <!-- Logging configuration -->
+    <logging traceSpecification="*=info" />
+
+</server>

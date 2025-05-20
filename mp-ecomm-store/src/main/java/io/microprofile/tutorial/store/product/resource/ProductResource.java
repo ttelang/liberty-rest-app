@@ -23,7 +23,7 @@ public class ProductResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getAllProducts() {
-        return Response.ok(products).build();
+    public List<Product> getProducts() {
+        return products;
     }
 }

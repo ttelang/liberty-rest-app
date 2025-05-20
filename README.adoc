@@ -9,7 +9,7 @@ toc::[]
 
 == Overview
 
-This directory demonstrates modern Java enterprise development practices including REST API design, loose coupling, dependency injection, and unit testing strategies.
+This directory contain code examples based on Chapter 03 of the Official MicroProfile API Tutorial. It demonstrates modern Java enterprise development practices including REST API design, loose coupling, dependency injection, and unit testing strategies.
 
 == Projects
 

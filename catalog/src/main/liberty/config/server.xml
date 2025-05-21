@@ -1,7 +1,6 @@
 <server description="MicroProfile Tutorial Liberty Server">
     <featureManager>
         <platform>jakartaEE-10.0</platform>
-        <platform>microProfile-6.1</platform>
         <feature>restfulWS</feature>
         <feature>jsonp</feature>
         <feature>jsonb</feature>
@@ -16,7 +15,7 @@
 
     <!-- Derby Library Configuration -->
     <library id="derbyJDBCLib">
-        <fileset dir="${shared.resource.dir}/" includes="derby*.jar" />
+        <fileset dir="${server.config.dir}/../../usr/shared/resources" includes="derby*.jar" />
     </library>
 
     <dataSource id="productjpadatasource" jndiName="jdbc/productjpadatasource">

@@ -1,15 +1,14 @@
 package io.microprofile.tutorial.store.product.repository;
 
 import java.util.List;
-
 import io.microprofile.tutorial.store.product.entity.Product;
-import jakarta.enterprise.context.RequestScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
-@RequestScoped
+@ApplicationScoped
 public class ProductRepository {
-
+    
     @PersistenceContext(unitName = "product-unit")
     private EntityManager em;
 
@@ -26,8 +25,7 @@ public class ProductRepository {
     }
 
     public List<Product> findAllProducts() {
-        return em.createNamedQuery("Product.findAllProducts", 
-        Product.class).getResultList();
+        return em.createNamedQuery("Product.findAllProducts", Product.class).getResultList();
     }
 
     public Product findProductById(Long id) {
@@ -41,4 +39,8 @@ public class ProductRepository {
             .setParameter("price", price).getResultList();
     }
 
+    // For testing only: allow injection of a mock EntityManager
+    protected void setEntityManager(EntityManager em) {
+        this.em = em;
+    }
 }

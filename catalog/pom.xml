@@ -98,19 +98,19 @@
     <dependency>
         <groupId>org.apache.derby</groupId>
         <artifactId>derby</artifactId>
-        <version>10.15.2.0</version>
+        <version>10.16.1.1</version>
         <scope>provided</scope>
     </dependency>
     <dependency>
         <groupId>org.apache.derby</groupId>
         <artifactId>derbyshared</artifactId>
-        <version>10.15.2.0</version>
+        <version>10.16.1.1</version>
         <scope>provided</scope>
     </dependency>
     <dependency>
         <groupId>org.apache.derby</groupId>
         <artifactId>derbytools</artifactId>
-        <version>10.15.2.0</version>
+        <version>10.16.1.1</version>
         <scope>provided</scope>
     </dependency>
   </dependencies>

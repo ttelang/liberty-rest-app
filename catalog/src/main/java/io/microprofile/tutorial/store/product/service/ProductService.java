@@ -5,12 +5,11 @@ import java.util.logging.Logger;
 
 import io.microprofile.tutorial.store.product.entity.Product;
 import io.microprofile.tutorial.store.product.repository.ProductRepository;
-import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
-@ApplicationScoped
-@Transactional
+@RequestScoped
 public class ProductService {
     
     private static final Logger LOGGER = Logger.getLogger(ProductService.class.getName());

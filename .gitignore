@@ -23,8 +23,22 @@
 hs_err_pid*
 replay_pid*
 
-# Maven
+# Maven build directories
 target/
+*/target/
+**/target/
+catalog/target/
+cart/target/
+order/target/
+user/target/
+inventory/target/
+payment/target/
+shipment/target/
+hello-world/target/
+mp-ecomm-store/target/
+liberty-rest-app/target/
+
+# Maven files
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup

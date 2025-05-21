@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.example</groupId>
-  <artifactId>liberty-rest-app</artifactId>
+  <artifactId>hello-world</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>war</packaging>
 
@@ -20,10 +20,12 @@
     <maven.compiler.target>17</maven.compiler.target>
 
     <!-- Liberty configuration -->
-    <liberty.var.default.http.port>5050</liberty.var.default.http.port>
-    <liberty.var.default.https.port>5051</liberty.var.default.https.port>
+    <liberty.var.default.http.port>2010</liberty.var.default.http.port>
+    <liberty.var.default.https.port>2011</liberty.var.default.https.port>
 
-    <liberty.var.app.context.root>liberty-rest-app</liberty.var.app.context.root>
+    <!-- This variable is referenced as ${app.context.root} in server.xml -->
+    <app.context.root>hello-world</app.context.root>
+    <liberty.var.app.context.root>hello-world</liberty.var.app.context.root>
 
   </properties>
 
@@ -50,6 +52,14 @@
               <groupId>io.openliberty.tools</groupId>
               <artifactId>liberty-maven-plugin</artifactId>
               <version>3.8.1</version>
+              <configuration>
+                  <serverName>defaultServer</serverName>
+                  <stripVersion>true</stripVersion>
+                  <bootstrapProperties>
+                      <default.http.port>2010</default.http.port>
+                      <default.https.port>2011</default.https.port>
+                  </bootstrapProperties>
+              </configuration>
           </plugin>
       </plugins>
   </build>

@@ -78,6 +78,7 @@
                         <p><strong>HTTP Port:</strong> 2010</p>
                         <p><strong>HTTPS Port:</strong> 2011</p>
                         <p><strong>Server Time:</strong> <%= new java.util.Date() %></p>
+                        <p><strong>API Endpoint:</strong> <a href="api/hello" class="btn btn-primary btn-sm">Try Hello World API</a></p>
                     </div>
                 </div>
             </div>

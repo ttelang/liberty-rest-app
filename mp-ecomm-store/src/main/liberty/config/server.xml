@@ -7,9 +7,4 @@
     <httpEndpoint httpPort="${default.http.port}" httpsPort="${default.https.port}"
                   id="defaultHttpEndpoint" host="*" />
     <webApplication location="mp-ecomm-store.war" contextRoot="${app.context.root}"/>
-
-    <mpMetrics authentication="false" />
-    <logging traceSpecification="com.ibm.ws.microprofile.health.*=all" />
-    
-    <variable name="io_openliberty_guides_system_inMaintenance" value="false" />
 </server>

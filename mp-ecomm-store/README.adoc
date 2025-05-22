@@ -126,6 +126,7 @@ Once the server is running, you can access:
 == Features and Future Enhancements
 
 Current features:
+
 * Basic product listing functionality
 * JSON-B serialization
 

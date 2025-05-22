@@ -2,9 +2,10 @@
     <featureManager>
         <feature>restfulWS-3.1</feature>
         <feature>jsonb-3.0</feature>
+        <feature>cdi-4.0</feature>
     </featureManager>
 
-    <httpEndpoint httpPort="${default.http.port}" httpsPort="${default.https.port}"
+    <httpEndpoint httpPort="5052" httpsPort="5053"
                   id="defaultHttpEndpoint" host="*" />
     <webApplication location="mp-ecomm-store.war" contextRoot="${app.context.root}"/>
 

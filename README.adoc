@@ -1,0 +1,194 @@
+= Liberty REST Application
+:toc:
+:icons: font
+:source-highlighter: highlight.js
+:experimental:
+
+This project demonstrates REST applications using MicroProfile and Jakarta EE. It contains multiple sub-projects:
+
+* `hello-world`: A simple Hello World REST application
+* `mp-ecomm-store`: A e-commerce store microservice with products API
+
+== Prerequisites
+
+* JDK 17 or later
+* Maven 3.8+
+
+== Development Environment
+
+This project includes a GitHub Codespace configuration with:
+
+* JDK 17 via SDKMAN
+* Maven build tools
+* VS Code extensions for Java, MicroProfile, and GitHub Copilot
+
+=== Switching Java Versions
+
+The development container comes with SDKMAN installed, which allows easy switching between Java versions:
+
+[source,bash]
+----
+# List installed Java versions
+sdk list java | grep -E ".*\s+installed"
+
+# Switch to JDK 17 for the current shell session
+sdk use java 17.0.15-ms
+
+# Make JDK 17 the default for all sessions
+sdk default java 17.0.15-ms
+
+# Verify the current Java version
+java -version
+----
+
+== Running the Applications
+
+=== Hello World Application
+
+. Navigate to the hello-world directory:
++
+[source,bash]
+----
+cd hello-world
+----
+
+. Build and run the app using Maven:
++
+[source,bash]
+----
+mvn clean package liberty:run
+----
+
+. Or, for development mode with hot reload:
++
+[source,bash]
+----
+mvn liberty:dev
+----
+
+. Access the application at http://localhost:5050/hello-world/api/hello
+
+=== MP E-Commerce Store Application
+
+. Navigate to the mp-ecomm-store directory:
++
+[source,bash]
+----
+cd mp-ecomm-store
+----
+
+. Build and run the app using Maven:
++
+[source,bash]
+----
+mvn clean package liberty:run
+----
+
+. Or, for development mode with hot reload:
++
+[source,bash]
+----
+mvn liberty:dev
+----
+
+. Access the products API at http://localhost:5052/mp-ecomm-store/api/products
+
+== Troubleshooting
+
+=== Port Conflicts
+
+Both applications are configured to use different ports by default:
+
+* The `hello-world` application uses port 5050
+* The `mp-ecomm-store` application uses port 5052
+
+If you encounter port conflicts (HTTP 500 errors or "Address already in use" messages), verify:
+
+1. No other applications are using the required ports
+2. Only one Liberty server is trying to use each port
+3. The server.xml files have distinct port configurations:
+
+.hello-world/src/main/liberty/config/server.xml
+[source,xml]
+----
+<httpEndpoint httpPort="${default.http.port}" httpsPort="${default.https.port}" id="defaultHttpEndpoint" host="*" />
+----
+
+.mp-ecomm-store/src/main/liberty/config/server.xml
+[source,xml]
+----
+<httpEndpoint httpPort="5052" httpsPort="5053" id="defaultHttpEndpoint" host="*" />
+----
+
+=== Additional Troubleshooting Tips
+
+1. **Server Startup Issues**: If a server fails to start, check:
+   * Port conflicts with other processes (use `netstat -tuln` to check)
+   * Required features missing in server.xml
+   * Check server logs in `target/liberty/wlp/usr/servers/<server-name>/logs/`
+
+2. **Application Deployment Issues**:
+   * Verify the application WAR file is properly built
+   * Check contextRoot matches what you're trying to access
+
+3. **Liberty Development Mode**:
+   * When using `mvn liberty:dev`, you can access additional dev commands by pressing Enter
+   * Use the `restart` command if the server encounters issues
+
+4. **Debugging**:
+   * Enable more detailed logging by adding to server.xml:
+     ```xml
+     <logging traceSpecification="com.ibm.ws.webcontainer*=all:io.openliberty.*=all" />
+     ```
+
+=== HTTP 500 Internal Server Errors in Products API
+
+If you experience HTTP 500 errors when accessing the Products API endpoint:
+
+1. **Port Conflicts**: Ensure the mp-ecomm-store server is running on port 5052 as configured
+   * If another process is using this port, either stop that process or modify the `server.xml` to use a different port
+
+== Application Features
+
+=== Hello World Application
+* Basic REST endpoint for "Hello World" response
+* Minimal server configuration
+* Simple Jakarta EE example
+
+=== MP E-Commerce Store
+* Products REST API 
+* JSON-B for object serialization
+* CDI for dependency injection
+
+== Development Tips
+
+1. **Modifying Configuration**:
+   * Server ports can be changed in the respective `server.xml` files
+   * Application context roots can be modified via the `app.context.root` property
+   * JVM options can be set using the Liberty Maven plugin configuration
+
+== Project Structure
+
+[source]
+----
+liberty-rest-app/
+├── hello-world/            # Simple REST application
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/      # Java source code
+│   │   │   ├── liberty/   # Liberty server configuration
+│   │   │   └── webapp/    # Web resources
+│   │   └── test/
+│   ├── pom.xml            # Maven build file
+│   └── README.adoc        # Project documentation
+├── mp-ecomm-store/        # E-commerce microservice
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/      # Java source code
+│   │   │   ├── liberty/   # Liberty server configuration
+│   │   │   └── resources/ # Application resources
+│   │   └── test/
+│   ├── pom.xml            # Maven build file
+│   └── README.adoc        # Project documentation
+└── README.adoc            # Root documentation
+----

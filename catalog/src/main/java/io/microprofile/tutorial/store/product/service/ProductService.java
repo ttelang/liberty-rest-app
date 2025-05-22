@@ -7,7 +7,6 @@ import io.microprofile.tutorial.store.product.entity.Product;
 import io.microprofile.tutorial.store.product.repository.ProductRepository;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 
 @RequestScoped
 public class ProductService {

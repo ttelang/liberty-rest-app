@@ -41,7 +41,7 @@ public class InventoryResource {
     private UriInfo uriInfo;
 
     @GET
-    @Operation(summary = "Get all inventory items", description = "Returns a list of all inventory items")
+    @Operation(summary = "Get all inventory items", description = "Returns a paginated list of inventory items with optional filtering")
     @APIResponse(
         responseCode = "200",
         description = "List of inventory items",
@@ -50,8 +50,27 @@ public class InventoryResource {
             schema = @Schema(type = SchemaType.ARRAY, implementation = Inventory.class)
         )
     )
-    public List<Inventory> getAllInventories() {
-        return inventoryService.getAllInventories();
+    public Response getAllInventories(
+        @Parameter(description = "Page number (zero-based)", schema = @Schema(defaultValue = "0"))
+        @QueryParam("page") @DefaultValue("0") int page,
+        
+        @Parameter(description = "Page size", schema = @Schema(defaultValue = "20"))
+        @QueryParam("size") @DefaultValue("20") int size,
+        
+        @Parameter(description = "Filter by minimum quantity")
+        @QueryParam("minQuantity") Integer minQuantity,
+        
+        @Parameter(description = "Filter by maximum quantity")
+        @QueryParam("maxQuantity") Integer maxQuantity) {
+        
+        List<Inventory> inventories = inventoryService.getAllInventories(page, size, minQuantity, maxQuantity);
+        long totalCount = inventoryService.countInventories(minQuantity, maxQuantity);
+        
+        return Response.ok(inventories)
+                .header("X-Total-Count", totalCount)
+                .header("X-Page-Number", page)
+                .header("X-Page-Size", size)
+                .build();
     }
 
     @GET

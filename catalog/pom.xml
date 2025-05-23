@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>io.microprofile.tutorial</groupId>
-  <artifactId>mp-ecomm-store</artifactId>
+  <artifactId>catalog</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>war</packaging>
 

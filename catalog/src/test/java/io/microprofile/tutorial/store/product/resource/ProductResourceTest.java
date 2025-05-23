@@ -68,6 +68,7 @@ public class ProductResourceTest {
         assertNotNull(response);
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         
+        @SuppressWarnings("unchecked")
         List<Product> products = (List<Product>) response.getEntity();
         assertNotNull(products);
         assertEquals(2, products.size());

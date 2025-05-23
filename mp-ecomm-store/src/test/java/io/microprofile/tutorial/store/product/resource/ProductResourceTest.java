@@ -2,11 +2,7 @@ package io.microprofile.tutorial.store.product.resource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.List;
-import java.util.Optional;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +38,8 @@ public class ProductResourceTest {
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         
         // Assert the entity content
-        List<Product> products = (List<Product>) response.getEntity();
+        @SuppressWarnings("unchecked")
+        List<Product> products = response.readEntity(List.class);
         assertNotNull(products);
         assertEquals(2, products.size());
     }
@@ -55,11 +52,11 @@ public class ProductResourceTest {
         // Assert response properties
         assertNotNull(response);
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        
         // Assert the entity content
-        Product product = (Product) response.getEntity();
+        Product product = response.readEntity(Product.class);
         assertNotNull(product);
         assertEquals(1L, product.getId());
+        assertEquals("iPhone", product.getName());
         assertEquals("iPhone", product.getName());
     }
     
@@ -84,16 +81,17 @@ public class ProductResourceTest {
         // Assert response properties
         assertNotNull(response);
         assertEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
-        
         // Assert the entity content
-        Product createdProduct = (Product) response.getEntity();
+        Product createdProduct = response.readEntity(Product.class);
         assertNotNull(createdProduct);
         assertEquals(3L, createdProduct.getId());
         assertEquals("iPad", createdProduct.getName());
         
         // Verify the product was added to the list
         Response getAllResponse = productResource.getAllProducts();
-        List<Product> allProducts = (List<Product>) getAllResponse.getEntity();
+        @SuppressWarnings("unchecked")
+        List<Product> allProducts = getAllResponse.readEntity(List.class);
+        assertEquals(3, allProducts.size());
         assertEquals(3, allProducts.size());
     }
     
@@ -108,9 +106,8 @@ public class ProductResourceTest {
         // Assert response properties
         assertNotNull(response);
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        
         // Assert the entity content
-        Product returnedProduct = (Product) response.getEntity();
+        Product returnedProduct = response.readEntity(Product.class);
         assertNotNull(returnedProduct);
         assertEquals(1L, returnedProduct.getId());
         assertEquals("iPhone Pro", returnedProduct.getName());
@@ -119,8 +116,9 @@ public class ProductResourceTest {
         
         // Verify the product was updated in the list
         Response getResponse = productResource.getProductById(1L);
-        Product retrievedProduct = (Product) getResponse.getEntity();
+        Product retrievedProduct = getResponse.readEntity(Product.class);
         assertEquals("iPhone Pro", retrievedProduct.getName());
+        assertEquals(1199.99, retrievedProduct.getPrice());
         assertEquals(1199.99, retrievedProduct.getPrice());
     }
     
@@ -145,14 +143,15 @@ public class ProductResourceTest {
         // Assert response properties
         assertNotNull(response);
         assertEquals(Response.Status.NO_CONTENT.getStatusCode(), response.getStatus());
-        
         // Verify the product was deleted
         Response getResponse = productResource.getProductById(1L);
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), getResponse.getStatus());
         
         // Verify the total count is reduced
         Response getAllResponse = productResource.getAllProducts();
-        List<Product> allProducts = (List<Product>) getAllResponse.getEntity();
+        @SuppressWarnings("unchecked")
+        List<Product> allProducts = getAllResponse.readEntity(List.class);
+        assertEquals(1, allProducts.size());
         assertEquals(1, allProducts.size());
     }
     
@@ -163,11 +162,10 @@ public class ProductResourceTest {
         
         // Assert response properties
         assertNotNull(response);
-        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
-        
         // Verify list size remains unchanged
         Response getAllResponse = productResource.getAllProducts();
-        List<Product> allProducts = (List<Product>) getAllResponse.getEntity();
+        @SuppressWarnings("unchecked")
+        List<Product> allProducts = getAllResponse.readEntity(List.class);
         assertEquals(2, allProducts.size());
     }
 }

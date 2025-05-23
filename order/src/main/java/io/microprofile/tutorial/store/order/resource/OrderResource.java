@@ -32,7 +32,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 @RequestScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-@Tag(name = "Order Resource", description = "Order management operations")
+@Tag(name = "Order", description = "Operations related to order management")
 public class OrderResource {
 
     @Inject

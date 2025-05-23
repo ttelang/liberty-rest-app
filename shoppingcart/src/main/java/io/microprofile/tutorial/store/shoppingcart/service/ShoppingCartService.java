@@ -104,7 +104,6 @@ public class ShoppingCartService {
             CatalogClient.ProductInfo productInfo = catalogClient.getProductInfo(item.getProductId());
             item.setProductName(productInfo.getName());
             item.setPrice(productInfo.getPrice());
-            item.setImageUrl(productInfo.getImageUrl());
         }
         
         LOGGER.info(String.format("Adding item to cart %d: %s, quantity %d", 
@@ -159,11 +158,6 @@ public class ShoppingCartService {
         // If no price is provided, use the existing one
         if (item.getPrice() == 0) {
             item.setPrice(currentItem.getPrice());
-        }
-        
-        // If no image URL is provided, use the existing one
-        if (item.getImageUrl() == null) {
-            item.setImageUrl(currentItem.getImageUrl());
         }
         
         LOGGER.info(String.format("Updating item %d in cart %d: new quantity %d", 

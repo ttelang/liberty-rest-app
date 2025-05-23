@@ -19,8 +19,8 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
         version = "1.0.0",
         description = "API for managing payment transactions",
         license = @License(
-            name = "Apache 2.0",
-            url = "http://www.apache.org/licenses/LICENSE-2.0.html"),
+            name = "Eclipse Public License 2.0",
+            url = "https://www.eclipse.org/legal/epl-2.0/"),
         contact = @Contact(
             name = "Payment API Support",
             email = "support@example.com")),

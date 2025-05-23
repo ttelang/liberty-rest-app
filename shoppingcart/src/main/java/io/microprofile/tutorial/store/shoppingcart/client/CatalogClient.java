@@ -65,7 +65,6 @@ public class CatalogClient {
                 // Simple parsing - in a real app, use proper JSON parsing
                 String name = extractField(jsonResponse, "name");
                 String priceStr = extractField(jsonResponse, "price");
-                String imageUrl = extractField(jsonResponse, "imageUrl");
                 
                 double price = 0.0;
                 try {
@@ -74,7 +73,7 @@ public class CatalogClient {
                     LOGGER.warning("Failed to parse product price: " + priceStr);
                 }
                 
-                ProductInfo productInfo = new ProductInfo(productId, name, price, imageUrl);
+                ProductInfo productInfo = new ProductInfo(productId, name, price);
                 
                 // Cache the result
                 productCache.put(productId, productInfo);
@@ -83,7 +82,7 @@ public class CatalogClient {
             }
             
             LOGGER.warning(String.format("Failed to get product info. Status code: %d", response.getStatus()));
-            return new ProductInfo(productId, "Unknown Product", 0.0, null);
+            return new ProductInfo(productId, "Unknown Product", 0.0);
         } catch (ProcessingException e) {
             LOGGER.log(Level.SEVERE, "Error connecting to Catalog Service", e);
             throw e;
@@ -113,8 +112,7 @@ public class CatalogClient {
         return new ProductInfo(
             productId,
             "Product " + productId + " (Service Unavailable)",
-            0.0,
-            null
+            0.0
         );
     }
     
@@ -164,13 +162,11 @@ public class CatalogClient {
         private final Long productId;
         private final String name;
         private final double price;
-        private final String imageUrl;
         
-        public ProductInfo(Long productId, String name, double price, String imageUrl) {
+        public ProductInfo(Long productId, String name, double price) {
             this.productId = productId;
             this.name = name;
             this.price = price;
-            this.imageUrl = imageUrl;
         }
         
         public Long getProductId() {
@@ -183,10 +179,6 @@ public class CatalogClient {
         
         public double getPrice() {
             return price;
-        }
-        
-        public String getImageUrl() {
-            return imageUrl;
         }
     }
 }

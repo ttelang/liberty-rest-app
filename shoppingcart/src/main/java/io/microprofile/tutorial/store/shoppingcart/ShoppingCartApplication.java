@@ -18,12 +18,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
         title = "Shopping Cart API",
         version = "1.0.0",
         description = "API for managing shopping carts",
-        license = @License(
-            name = "Apache 2.0",
-            url = "http://www.apache.org/licenses/LICENSE-2.0.html"),
-        contact = @Contact(
-            name = "Shopping Cart API Support",
-            email = "support@example.com")),
+        ),
     tags = {
         @Tag(name = "Shopping Cart", description = "Operations related to shopping cart management")
     }

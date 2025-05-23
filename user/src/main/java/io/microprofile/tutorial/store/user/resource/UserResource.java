@@ -8,6 +8,7 @@ import java.util.List;
 
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -22,11 +23,14 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 /**
  * REST resource for user management operations.
+ * Provides endpoints for creating, retrieving, updating, and deleting users.
+ * Implements standard RESTful practices with proper status codes and hypermedia links.
  */
 @Path("/users")
 @Tag(name = "User Management", description = "Operations for managing users")
@@ -43,8 +47,15 @@ public class UserResource {
     @GET
     @Operation(summary = "Get all users", description = "Returns a list of all users")
     @APIResponse(responseCode = "200", description = "List of users")
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
+    @APIResponse(responseCode = "204", description = "No users found")
+    public Response getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        
+        if (users.isEmpty()) {
+            return Response.noContent().build();
+        }
+        
+        return Response.ok(users).build();
     }
 
     @GET
@@ -52,36 +63,69 @@ public class UserResource {
     @Operation(summary = "Get user by ID", description = "Returns a user by their ID")
     @APIResponse(responseCode = "200", description = "User found")
     @APIResponse(responseCode = "404", description = "User not found")
-    public User getUserById(@PathParam("id") Long id) {
-        return userService.getUserById(id);
+    public Response getUserById(
+            @PathParam("id") 
+            @Parameter(description = "User ID", required = true) 
+            Long id) {
+        User user = userService.getUserById(id);
+        // Add HATEOAS links
+        URI selfLink = uriInfo.getBaseUriBuilder()
+                            .path(UserResource.class)
+                            .path(String.valueOf(user.getUserId()))
+                            .build();
+        return Response.ok(user)
+                 .link(selfLink, "self")
+                 .build();
     }
 
     @POST
     @Operation(summary = "Create new user", description = "Creates a new user")
-    @APIResponse(responseCode = "201", description = "User created")
+    @APIResponse(responseCode = "201", description = "User created successfully")
+    @APIResponse(responseCode = "400", description = "Invalid user data")
     @APIResponse(responseCode = "409", description = "Email already in use")
-    public Response createUser(@Valid User user) {
+    public Response createUser(
+            @Valid 
+            @NotNull(message = "Request body cannot be empty")
+            @Parameter(description = "User to create", required = true)
+            User user) {
         User createdUser = userService.createUser(user);
-        URI location = uriInfo.getAbsolutePathBuilder().path(String.valueOf(createdUser.getUserId())).build();
-        return Response.created(location).entity(createdUser).build();
+        URI location = uriInfo.getAbsolutePathBuilder()
+                          .path(String.valueOf(createdUser.getUserId()))
+                          .build();
+        return Response.created(location)
+                 .entity(createdUser)
+                 .build();
     }
 
     @PUT
     @Path("/{id}")
     @Operation(summary = "Update user", description = "Updates an existing user")
-    @APIResponse(responseCode = "200", description = "User updated")
+    @APIResponse(responseCode = "200", description = "User updated successfully")
+    @APIResponse(responseCode = "400", description = "Invalid user data")
     @APIResponse(responseCode = "404", description = "User not found")
     @APIResponse(responseCode = "409", description = "Email already in use")
-    public User updateUser(@PathParam("id") Long id, @Valid User user) {
-        return userService.updateUser(id, user);
+    public Response updateUser(
+            @PathParam("id") 
+            @Parameter(description = "User ID", required = true)
+            Long id, 
+            
+            @Valid 
+            @NotNull(message = "Request body cannot be empty")
+            @Parameter(description = "Updated user information", required = true)
+            User user) {
+        User updatedUser = userService.updateUser(id, user);
+        return Response.ok(updatedUser).build();
     }
 
     @DELETE
     @Path("/{id}")
-    @Operation(summary = "Delete user", description = "Deletes a user")
-    @APIResponse(responseCode = "204", description = "User deleted")
+    @Operation(summary = "Delete user", description = "Deletes a user by ID")
+    @APIResponse(responseCode = "204", description = "User successfully deleted")
     @APIResponse(responseCode = "404", description = "User not found")
-    public Response deleteUser(@PathParam("id") Long id) {
+    public Response deleteUser(
+            @PathParam("id") 
+            @Parameter(description = "User ID to delete", required = true)
+            Long id) {
         userService.deleteUser(id);
         return Response.noContent().build();
     }

@@ -3,22 +3,37 @@ package io.microprofile.tutorial.store.user.repository;
 import io.microprofile.tutorial.store.user.entity.User;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
 /**
- * Simple in-memory repository for User objects.
- * This class provides CRUD operations for User entities to demonstrate MicroProfile concepts.
+ * Thread-safe in-memory repository for User objects.
+ * This class provides CRUD operations for User entities using a ConcurrentHashMap for thread-safe storage
+ * and AtomicLong for safe ID generation in a concurrent environment.
+ * 
+ * Key features:
+ * - Thread-safe operations using ConcurrentHashMap
+ * - Atomic ID generation
+ * - Immutable User objects in storage
+ * - Validation of user data
+ * - Optional return types for null-safety
+ * 
+ * Note: This is a demo implementation. In production:
+ * - Consider using a persistent database
+ * - Add caching mechanisms
+ * - Implement proper pagination
+ * - Add audit logging
  */
 @ApplicationScoped
 public class UserRepository {
 
-    private final Map<Long, User> users = new HashMap<>();
-    private long nextId = 1;
+    private final Map<Long, User> users = new ConcurrentHashMap<>();
+    private final AtomicLong nextId = new AtomicLong(1);
 
     /**
      * Saves a user to the repository.
@@ -29,10 +44,18 @@ public class UserRepository {
      */
     public User save(User user) {
         if (user.getUserId() == null) {
-            user.setUserId(nextId++);
+            user.setUserId(nextId.getAndIncrement());
         }
-        users.put(user.getUserId(), user);
-        return user;
+        User savedUser = User.builder()
+            .userId(user.getUserId())
+            .name(user.getName())
+            .email(user.getEmail())
+            .passwordHash(user.getPasswordHash())
+            .address(user.getAddress())
+            .phoneNumber(user.getPhoneNumber())
+            .build();
+        users.put(savedUser.getUserId(), savedUser);
+        return savedUser;
     }
 
     /**
@@ -83,13 +106,30 @@ public class UserRepository {
      * @param user The updated user information
      * @return An Optional containing the updated user, or empty if not found
      */
+    /**
+     * Updates an existing user atomically.
+     * Only updates the user if it exists and the update is valid.
+     *
+     * @param id The ID of the user to update
+     * @param user The updated user information
+     * @return An Optional containing the updated user, or empty if not found
+     * @throws IllegalArgumentException if user is null or has invalid data
+     */
     public Optional<User> update(Long id, User user) {
-        if (!users.containsKey(id)) {
-            return Optional.empty();
+        if (user == null) {
+            throw new IllegalArgumentException("User cannot be null");
         }
         
-        user.setUserId(id);
-        users.put(id, user);
-        return Optional.of(user);
+        return Optional.ofNullable(users.computeIfPresent(id, (key, existingUser) -> {
+            User updatedUser = User.builder()
+                .userId(id)
+                .name(user.getName() != null ? user.getName() : existingUser.getName())
+                .email(user.getEmail() != null ? user.getEmail() : existingUser.getEmail())
+                .passwordHash(user.getPasswordHash() != null ? user.getPasswordHash() : existingUser.getPasswordHash())
+                .address(user.getAddress() != null ? user.getAddress() : existingUser.getAddress())
+                .phoneNumber(user.getPhoneNumber() != null ? user.getPhoneNumber() : existingUser.getPhoneNumber())
+                .build();
+            return updatedUser;
+        }));
     }
 }

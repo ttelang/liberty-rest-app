@@ -18,6 +18,8 @@ This project demonstrates the key capabilities of MicroProfile OpenAPI and in-me
 * *RESTful API* using Jakarta RESTful Web Services
 * *OpenAPI Documentation* with Swagger UI
 * *In-Memory Persistence* using ConcurrentHashMap for thread-safe data storage
+* *HTML Landing Page* with API documentation and service status
+* *Maintenance Mode* support with configuration-based toggles
 
 == MicroProfile Features Implemented
 
@@ -154,8 +156,48 @@ The application uses MicroProfile Config to externalize configuration:
 
 [source,properties]
 ----
+# Enable OpenAPI scanning
 mp.openapi.scan=true
+
+# Maintenance mode configuration
+product.maintenanceMode=false
+product.maintenanceMessage=The product catalog service is currently in maintenance mode. Please try again later.
 ----
+
+The maintenance mode configuration allows dynamic control of service availability:
+
+* `product.maintenanceMode` - When set to `true`, the service returns a 503 Service Unavailable response
+* `product.maintenanceMessage` - Customizable message displayed when the service is in maintenance mode
+
+==== Maintenance Mode Implementation
+
+The service checks the maintenance mode configuration before processing requests:
+
+[source,java]
+----
+@Inject
+@ConfigProperty(name="product.maintenanceMode", defaultValue="false")
+private boolean maintenanceMode;
+    
+@Inject
+@ConfigProperty(name="product.maintenanceMessage", 
+                defaultValue="The product catalog service is currently in maintenance mode. Please try again later.")
+private String maintenanceMessage;
+
+// In request handling method
+if (maintenance.isMaintenanceMode()) {
+    return Response
+            .status(Response.Status.SERVICE_UNAVAILABLE)
+            .entity(maintenance.getMaintenanceMessage())
+            .build();
+}
+----
+
+This pattern enables:
+
+* Graceful service degradation during maintenance periods
+* Dynamic control without redeployment (when using external configuration sources)
+* Clear communication to API consumers
 
 == Architecture
 
@@ -266,6 +308,9 @@ catalog/
 │   │   │   └── META-INF/
 │   │   │       └── microprofile-config.properties
 │   │   └── webapp/                     # Web resources
+│   │       ├── index.html              # Landing page with API documentation
+│   │       └── WEB-INF/
+│   │           └── web.xml             # Web application configuration
 │   └── test/                           # Test classes
 └── pom.xml                             # Maven build file
 ----
@@ -300,13 +345,18 @@ mvn liberty:run
 
 [source,bash]
 ----
-
 # OpenAPI documentation
 curl -X GET http://localhost:5050/openapi
+
+# Check if service is in maintenance mode
+curl -X GET http://localhost:5050/api/products
 ----
 
 To view the Swagger UI, open the following URL in your browser:
 http://localhost:5050/openapi/ui
+
+To view the landing page with API documentation:
+http://localhost:5050/
 
 == Server Configuration
 
@@ -453,6 +503,10 @@ This enables scanning of OpenAPI annotations in the application.
 
 * *OpenAPI documentation not available*: Make sure `mp.openapi.scan=true` is set in the properties file
 * *Concurrent modification exceptions*: Ensure proper use of thread-safe collections and operations
+* *Service always in maintenance mode*: Check the `product.maintenanceMode` property in `microprofile-config.properties`
+* *API returning 503 responses*: The service is likely in maintenance mode; set `product.maintenanceMode=false` in configuration
+* *OpenAPI documentation not available*: Make sure `mp.openapi.scan=true` is set in the properties file
+* *Concurrent modification exceptions*: Ensure proper use of thread-safe collections and operations
 
 === Thread Safety Troubleshooting
 
@@ -531,5 +585,38 @@ target/liberty/wlp/usr/servers/defaultServer/logs/
 == Resources
 
 * https://microprofile.io/[MicroProfile]
+
+=== HTML Landing Page
+
+The application includes a user-friendly HTML landing page (`index.html`) that provides:
+
+* Service overview with comprehensive documentation
+* API endpoints documentation with methods and descriptions
+* Interactive examples for all API operations
+* Links to OpenAPI/Swagger documentation
+
+==== Maintenance Mode Configuration in the UI
+
+The index.html page is designed to work seamlessly with the maintenance mode configuration. When maintenance mode is enabled via the `product.maintenanceMode` property, all API endpoints return a 503 Service Unavailable response with the configured maintenance message.
+
+The landing page displays comprehensive documentation about the API regardless of the maintenance state, allowing developers to continue learning about the API even when the service is undergoing maintenance.
+
+Key features of the landing page:
+
+* *Responsive Design*: Works well on desktop and mobile devices
+* *Comprehensive API Documentation*: All endpoints with sample requests and responses
+* *Interactive Examples*: Detailed sample requests and responses for each endpoint
+* *Modern Styling*: Clean, professional appearance with card-based layout
+
+The landing page is configured as the welcome file in `web.xml`:
+
+[source,xml]
+----
+<welcome-file-list>
+    <welcome-file>index.html</welcome-file>
+</welcome-file-list>
+----
+
+This provides a user-friendly entry point for API consumers and developers.
 
 

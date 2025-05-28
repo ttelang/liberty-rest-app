@@ -1,4 +1,4 @@
-package io.microprofile.tutorial.payment.entity;
+package io.microprofile.tutorial.store.payment.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 public class PaymentDetails {
     private String cardNumber;
     private String cardHolderName;
-    private String expiryDate;
+    private String expiryDate; // Format MM/YY
     private String securityCode;
     private BigDecimal amount;
 }

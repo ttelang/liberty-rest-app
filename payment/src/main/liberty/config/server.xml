@@ -6,15 +6,13 @@
         <feature>jsonp</feature>
         <feature>jsonb</feature>
         <feature>cdi</feature>
-        <feature>mpHealth</feature>
         <feature>mpConfig</feature>
-        <feature>mpMetrics</feature>
         <feature>mpOpenAPI</feature>
     </featureManager>
 
     <httpEndpoint httpPort="${default.http.port}" httpsPort="${default.https.port}"
                   id="defaultHttpEndpoint" host="*" />
     <webApplication location="payment.war" contextRoot="${app.context.root}"/>
-    <logging traceSpecification="*=info:com.ibm.ws.webcontainer*=all:com.ibm.ws.jaxrs*=all:com.ibm.ws.app.manager*=all:com.ibm.ws.microprofile.health.*=all:io.microprofile.tutorial.store.product.*=all:io.microprofile.tutorial.payment.*=all" />
+    <logging traceSpecification="*=info:com.ibm.ws.webcontainer*=all:com.ibm.ws.jaxrs*=all:com.ibm.ws.app.manager*=all:com.ibm.ws.microprofile.health.*=all:io.microprofile.tutorial.store.product.*=all:io.microprofile.tutorial.store.payment.*=all" />
     
 </server>

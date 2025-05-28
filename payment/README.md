@@ -76,6 +76,41 @@ The Payment Service integrates with:
 
 For testing purposes, payments with amounts ending in `.00` will fail, all others will succeed.
 
+## Custom ConfigSource
+
+The Payment Service implements a custom MicroProfile ConfigSource named `PaymentServiceConfigSource` that provides payment-specific configuration with high priority (ordinal: 500).
+
+### Available Configuration Properties
+
+| Property | Description | Default Value |
+|----------|-------------|---------------|
+| payment.gateway.endpoint | Payment gateway endpoint URL | https://secure-payment-gateway.example.com/api/v1 |
+
+### ConfigSource Endpoints
+
+The custom ConfigSource can be accessed and modified via the following endpoints:
+
+#### GET /payment/api/payment-config
+- Returns all current payment configuration values
+
+#### POST /payment/api/payment-config
+- Updates a payment configuration value
+- Request body: `{"key": "payment.property.name", "value": "new-value"}`
+
+### Example Usage
+
+```java
+// Inject standard MicroProfile Config
+@Inject
+@ConfigProperty(name="payment.gateway.endpoint")
+String gatewayUrl;
+
+// Or use the utility class
+String url = PaymentConfig.getConfigProperty("payment.gateway.endpoint");
+```
+
+The custom ConfigSource provides a higher priority than system properties and environment variables, allowing for service-specific defaults while still enabling override via standard mechanisms.
+
 ## Swagger UI
 
 OpenAPI documentation is available at: `http://localhost:9050/payment/api/openapi-ui/`

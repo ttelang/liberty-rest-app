@@ -9,15 +9,18 @@ toc::[]
 
 == Overview
 
-The MicroProfile Catalog Service is a modern Jakarta EE 10 application built with MicroProfile 6.1 specifications and running on Open Liberty. This service provides a RESTful API for product catalog management with enhanced MicroProfile features.
+The MicroProfile Catalog Service is a modern Jakarta EE 10 application built with MicroProfile 6.1 specifications and running on Open Liberty. This service provides a RESTful API for product catalog management with enhanced MicroProfile features and flexible persistence options.
 
-This project demonstrates the key capabilities of MicroProfile OpenAPI and in-memory persistence architecture.
+This project demonstrates the key capabilities of MicroProfile OpenAPI, MicroProfile Health, CDI qualifiers, and dual persistence architecture with both JPA/Derby database and in-memory implementations.
 
 == Features
 
 * *RESTful API* using Jakarta RESTful Web Services
 * *OpenAPI Documentation* with Swagger UI
-* *In-Memory Persistence* using ConcurrentHashMap for thread-safe data storage
+* *MicroProfile Health* with comprehensive startup, readiness, and liveness checks
+* *Dual Persistence Implementation* with configurable JPA/Derby database and in-memory storage options
+* *CDI Qualifiers* for dependency injection and implementation switching
+* *Derby Database Support* with automatic JAR deployment via Liberty Maven plugin
 * *HTML Landing Page* with API documentation and service status
 * *Maintenance Mode* support with configuration-based toggles
 
@@ -44,9 +47,291 @@ public Response getAllProducts() {
 
 The OpenAPI documentation is available at: `/openapi` (in various formats) and `/openapi/ui` (Swagger UI)
 
-=== In-Memory Persistence Architecture
+=== Dual Persistence Architecture
 
-The application implements a thread-safe in-memory persistence layer using `ConcurrentHashMap`:
+The application implements a flexible persistence layer with two implementations that can be switched via CDI qualifiers:
+
+1. *JPA/Derby Database Implementation* (Default) - For production use with persistent data storage
+2. *In-Memory Implementation* - For development, testing, and scenarios where persistence across restarts is not required
+
+==== CDI Qualifiers for Implementation Switching
+
+The application uses CDI qualifiers to select between different persistence implementations:
+
+[source,java]
+----
+// JPA Qualifier
+@Qualifier
+@Retention(RUNTIME)
+@Target({METHOD, FIELD, PARAMETER, TYPE})
+public @interface JPA {
+}
+
+// In-Memory Qualifier  
+@Qualifier
+@Retention(RUNTIME)
+@Target({METHOD, FIELD, PARAMETER, TYPE})
+public @interface InMemory {
+}
+----
+
+==== Service Layer with CDI Injection
+
+The service layer uses CDI qualifiers to inject the appropriate repository implementation:
+
+[source,java]
+----
+@ApplicationScoped
+public class ProductService {
+    
+    @Inject
+    @JPA  // Uses Derby database implementation by default
+    private ProductRepositoryInterface repository;
+    
+    public List<Product> findAllProducts() {
+        return repository.findAllProducts();
+    }
+    // ... other service methods
+}
+----
+
+==== JPA/Derby Database Implementation
+
+The JPA implementation provides persistent data storage using Apache Derby database:
+
+[source,java]
+----
+@ApplicationScoped
+@JPA
+@Transactional
+public class ProductJpaRepository implements ProductRepositoryInterface {
+    
+    @PersistenceContext(unitName = "catalogPU")
+    private EntityManager entityManager;
+    
+    @Override
+    public List<Product> findAllProducts() {
+        TypedQuery<Product> query = entityManager.createNamedQuery("Product.findAll", Product.class);
+        return query.getResultList();
+    }
+    
+    @Override
+    public Product createProduct(Product product) {
+        entityManager.persist(product);
+        return product;
+    }
+    // ... other JPA operations
+}
+----
+
+*Key Features of JPA Implementation:*
+* Persistent data storage across application restarts
+* ACID transactions with @Transactional annotation
+* Named queries for efficient database operations
+* Automatic schema generation and data loading
+* Derby embedded database for simplified deployment
+
+==== In-Memory Implementation
+
+The in-memory implementation uses thread-safe collections for fast data access:
+
+[source,java]
+----
+@ApplicationScoped
+@InMemory
+public class ProductInMemoryRepository implements ProductRepositoryInterface {
+    
+    // Thread-safe storage using ConcurrentHashMap
+    private final Map<Long, Product> productsMap = new ConcurrentHashMap<>();
+    private final AtomicLong idGenerator = new AtomicLong(1);
+    
+    @Override
+    public List<Product> findAllProducts() {
+        return new ArrayList<>(productsMap.values());
+    }
+    
+    @Override
+    public Product createProduct(Product product) {
+        if (product.getId() == null) {
+            product.setId(idGenerator.getAndIncrement());
+        }
+        productsMap.put(product.getId(), product);
+        return product;
+    }
+    // ... other in-memory operations
+}
+----
+
+*Key Features of In-Memory Implementation:*
+* Fast in-memory access without database I/O
+* Thread-safe operations using ConcurrentHashMap and AtomicLong
+* No external dependencies or database configuration
+* Suitable for development, testing, and stateless deployments
+
+=== How to Switch Between Implementations
+
+You can switch between JPA and In-Memory implementations in several ways:
+
+==== Method 1: CDI Qualifier Injection (Compile Time)
+
+Change the qualifier in the service class:
+
+[source,java]
+----
+@ApplicationScoped
+public class ProductService {
+    
+    // For JPA/Derby implementation (default)
+    @Inject
+    @JPA
+    private ProductRepositoryInterface repository;
+    
+    // OR for In-Memory implementation
+    // @Inject
+    // @InMemory  
+    // private ProductRepositoryInterface repository;
+}
+----
+
+==== Method 2: MicroProfile Config (Runtime)
+
+Configure the implementation type in `microprofile-config.properties`:
+
+[source,properties]
+----
+# Repository configuration
+product.repository.type=JPA     # Use JPA/Derby implementation
+# product.repository.type=InMemory  # Use In-Memory implementation
+
+# Database configuration
+product.database.enabled=true
+product.database.name=catalogDB
+----
+
+The application can use the configuration to determine which implementation to inject.
+
+==== Method 3: Alternative Annotations (Deployment Time)
+
+Use CDI @Alternative annotation to enable/disable implementations via beans.xml:
+
+[source,xml]
+----
+<!-- beans.xml -->
+<alternatives>
+    <class>io.microprofile.tutorial.store.product.repository.ProductInMemoryRepository</class>
+</alternatives>
+----
+
+=== Database Configuration and Setup
+
+==== Derby Database Configuration
+
+The Derby database is automatically configured through the Liberty Maven plugin and server.xml:
+
+*Maven Dependencies and Plugin Configuration:*
+[source,xml]
+----
+<dependencies>
+    <!-- Apache Derby Database Driver -->
+    <dependency>
+        <groupId>org.apache.derby</groupId>
+        <artifactId>derby</artifactId>
+        <version>10.16.1.1</version>
+    </dependency>
+    <!-- Derby Shared Components -->
+    <dependency>
+        <groupId>org.apache.derby</groupId>
+        <artifactId>derbyshared</artifactId>
+        <version>10.16.1.1</version>
+    </dependency>
+    <!-- Derby Tools (optional) -->
+    <dependency>
+        <groupId>org.apache.derby</groupId>
+        <artifactId>derbytools</artifactId>
+        <version>10.16.1.1</version>
+    </dependency>
+</dependencies>
+
+<plugin>
+    <groupId>io.openliberty.tools</groupId>
+    <artifactId>liberty-maven-plugin</artifactId>
+    <configuration>
+        <serverName>mpServer</serverName>
+        <copyDependencies>
+            <location>${project.build.directory}/liberty/wlp/usr/servers/mpServer/derby</location>
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derby</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derbyshared</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derbytools</artifactId>
+            </dependency>
+        </copyDependencies>
+    </configuration>
+</plugin>
+----
+
+*Server.xml Configuration:*
+[source,xml]
+----
+<!-- Derby DataSource Configuration -->
+<dataSource id="DefaultDataSource" jndiName="jdbc/catalogDB" type="javax.sql.DataSource">
+    <jdbcDriver>
+        <library>
+            <fileset dir="${server.config.dir}/derby"/>
+        </library>
+    </jdbcDriver>
+    <properties databaseName="catalogDB" createDatabase="create" 
+               connectionAttributes="upgrade=true"/>
+</dataSource>
+
+<!-- Derby Embedded Driver -->
+<library id="derbyLib">
+    <fileset dir="${server.config.dir}/derby" includes="*.jar"/>
+</library>
+----
+
+*JPA Configuration (persistence.xml):*
+[source,xml]
+----
+<persistence-unit name="catalogPU">
+    <jta-data-source>jdbc/catalogDB</jta-data-source>
+    <class>io.microprofile.tutorial.store.product.entity.Product</class>
+    <properties>
+        <!-- Derby-specific properties -->
+        <property name="jakarta.persistence.jdbc.driver" value="org.apache.derby.jdbc.EmbeddedDriver"/>
+        <property name="jakarta.persistence.jdbc.url" value="jdbc:derby:catalogDB;create=true"/>
+        
+        <!-- JPA Schema generation -->
+        <property name="jakarta.persistence.schema-generation.database.action" value="drop-and-create"/>
+        
+        <!-- Data loading -->
+        <property name="jakarta.persistence.sql-load-script-source" value="META-INF/load-data.sql"/>
+    </properties>
+</persistence-unit>
+----
+
+==== Implementation Comparison
+
+[cols="1,1,1", options="header"]
+|===
+| Feature | JPA/Derby Implementation | In-Memory Implementation
+| Data Persistence | Survives application restarts | Lost on restart
+| Performance | Database I/O overhead | Fastest access (memory)
+| Configuration | Requires datasource setup | No configuration needed
+| Dependencies | Derby JARs, JPA provider | None (Java built-ins)
+| Threading | JPA managed transactions | ConcurrentHashMap + AtomicLong
+| Development Setup | Database initialization | Immediate startup
+| Production Use | Recommended for production | Development/testing only
+| Scalability | Database connection limits | Memory limitations
+| Data Integrity | ACID transactions | Thread-safe operations
+| Error Handling | Database exceptions | Simple validation
+|===
 
 [source,java]
 ----
@@ -149,6 +434,179 @@ public List<Product> findAllProducts() {
 4. *Atomic Operations*: Uses atomic map operations like `putIfAbsent` and `compute` where appropriate
 
 NOTE: This implementation is suitable for development, testing, and scenarios where persistence across restarts is not required.
+
+=== MicroProfile Health
+
+The application implements comprehensive health monitoring using MicroProfile Health specifications with three types of health checks:
+
+==== Startup Health Check
+
+The startup health check verifies that the JPA EntityManagerFactory is properly initialized during application startup:
+
+[source,java]
+----
+@Startup
+@ApplicationScoped
+public class ProductServiceStartupCheck implements HealthCheck {
+
+    @PersistenceUnit
+    private EntityManagerFactory emf;
+
+    @Override
+    public HealthCheckResponse call() {
+        if (emf != null && emf.isOpen()) {
+            return HealthCheckResponse.up("ProductServiceStartupCheck");
+        } else {
+            return HealthCheckResponse.down("ProductServiceStartupCheck");
+        }
+    }
+}
+----
+
+*Key Features:*
+* Validates EntityManagerFactory initialization
+* Ensures JPA persistence layer is ready
+* Runs during application startup phase
+* Critical for database-dependent applications
+
+==== Readiness Health Check
+
+The readiness health check verifies database connectivity and ensures the service is ready to handle requests:
+
+[source,java]
+----
+@Readiness
+@ApplicationScoped
+public class ProductServiceHealthCheck implements HealthCheck {
+
+    @PersistenceContext
+    EntityManager entityManager;
+
+    @Override
+    public HealthCheckResponse call() {
+        if (isDatabaseConnectionHealthy()) {
+            return HealthCheckResponse.named("ProductServiceReadinessCheck")
+                    .up()
+                    .build();
+        } else {
+            return HealthCheckResponse.named("ProductServiceReadinessCheck")
+                    .down()
+                    .build();
+        }
+    }
+
+    private boolean isDatabaseConnectionHealthy(){
+        try {
+            // Perform a lightweight query to check the database connection
+            entityManager.find(Product.class, 1L);
+            return true;
+        } catch (Exception e) {
+            System.err.println("Database connection is not healthy: " + e.getMessage());
+            return false;
+        }
+    }
+}
+----
+
+*Key Features:*
+* Tests actual database connectivity via EntityManager
+* Performs lightweight database query
+* Indicates service readiness to receive traffic
+* Essential for load balancer health routing
+
+==== Liveness Health Check
+
+The liveness health check monitors system resources and memory availability:
+
+[source,java]
+----
+@Liveness
+@ApplicationScoped
+public class ProductServiceLivenessCheck implements HealthCheck {
+
+   @Override
+   public HealthCheckResponse call() {
+       Runtime runtime = Runtime.getRuntime();
+       long maxMemory = runtime.maxMemory();
+       long allocatedMemory = runtime.totalMemory();
+       long freeMemory = runtime.freeMemory();
+       long usedMemory = allocatedMemory - freeMemory;
+       long availableMemory = maxMemory - usedMemory;
+
+       long threshold = 100 * 1024 * 1024; // threshold: 100MB
+
+       HealthCheckResponseBuilder responseBuilder = HealthCheckResponse.named("systemResourcesLiveness")
+            .withData("FreeMemory", freeMemory)
+            .withData("MaxMemory", maxMemory)
+            .withData("AllocatedMemory", allocatedMemory)
+            .withData("UsedMemory", usedMemory)
+            .withData("AvailableMemory", availableMemory);
+
+        if (availableMemory > threshold) {
+            responseBuilder = responseBuilder.up();
+        } else {
+            responseBuilder = responseBuilder.down();
+        }
+
+        return responseBuilder.build();
+    }
+}
+----
+
+*Key Features:*
+* Monitors JVM memory usage and availability
+* Uses fixed 100MB threshold for available memory
+* Provides comprehensive memory diagnostics
+* Indicates if application should be restarted
+
+==== Health Check Endpoints
+
+The health checks are accessible via standard MicroProfile Health endpoints:
+
+* `/health` - Overall health status (all checks)
+* `/health/live` - Liveness checks only
+* `/health/ready` - Readiness checks only
+* `/health/started` - Startup checks only
+
+Example health check response:
+[source,json]
+----
+{
+  "status": "UP",
+  "checks": [
+    {
+      "name": "ProductServiceStartupCheck",
+      "status": "UP"
+    },
+    {
+      "name": "ProductServiceReadinessCheck", 
+      "status": "UP"
+    },
+    {
+      "name": "systemResourcesLiveness",
+      "status": "UP",
+      "data": {
+        "FreeMemory": 524288000,
+        "MaxMemory": 2147483648,
+        "AllocatedMemory": 1073741824,
+        "UsedMemory": 549453824,
+        "AvailableMemory": 1598029824
+      }
+    }
+  ]
+}
+----
+
+==== Health Check Benefits
+
+The comprehensive health monitoring provides:
+
+* *Startup Validation*: Ensures all dependencies are initialized before serving traffic
+* *Readiness Monitoring*: Validates service can handle requests (database connectivity)
+* *Liveness Detection*: Identifies when application needs restart (memory issues)
+* *Operational Visibility*: Detailed diagnostics for troubleshooting
+* *Container Orchestration*: Kubernetes/Docker health probe integration
+* *Load Balancer Integration*: Traffic routing based on health status
 
 === MicroProfile Config
 
@@ -350,7 +808,19 @@ curl -X GET http://localhost:5050/openapi
 
 # Check if service is in maintenance mode
 curl -X GET http://localhost:5050/api/products
+
+# Health check endpoints
+curl -X GET http://localhost:5050/health
+curl -X GET http://localhost:5050/health/live
+curl -X GET http://localhost:5050/health/ready
+curl -X GET http://localhost:5050/health/started
 ----
+
+*Health Check Testing:*
+* `/health` - Overall health status with all checks
+* `/health/live` - Liveness checks (memory monitoring)
+* `/health/ready` - Readiness checks (database connectivity)  
+* `/health/started` - Startup checks (EntityManagerFactory initialization)
 
 To view the Swagger UI, open the following URL in your browser:
 http://localhost:5050/openapi/ui
@@ -374,6 +844,7 @@ The application uses the following Liberty server configuration:
         <feature>cdi</feature>
         <feature>mpConfig</feature>
         <feature>mpOpenAPI</feature>
+        <feature>mpHealth</feature>
     </featureManager>
 
     <httpEndpoint httpPort="${default.http.port}" httpsPort="${default.https.port}"

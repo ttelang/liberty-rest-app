@@ -74,6 +74,36 @@
             background-color: #fff3cd;
             color: #856404;
         }
+        pre {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+        .health-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .health-up {
+            background-color: #28a745;
+        }
+        .health-down {
+            background-color: #dc3545;
+        }
+        .health-unknown {
+            background-color: #ffc107;
+        }
+        .interactive-link {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: 500;
+        }
         footer {
             margin-top: 40px;
             padding-top: 20px;
@@ -170,6 +200,154 @@
             <p><a href="/openapi/ui" target="_blank">/openapi/ui</a></p>
             <p>The OpenAPI definition is available at:</p>
             <p><a href="/openapi" target="_blank">/openapi</a></p>
+        </div>
+
+        <div class="card">
+            <h2>Health Checks</h2>
+            <p>The service implements comprehensive MicroProfile Health monitoring with three types of health checks:</p>
+            
+            <h3>Health Check Endpoints</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Endpoint</th>
+                        <th>Purpose</th>
+                        <th>Description</th>
+                        <th>Link</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="health-indicator health-unknown" id="overall-status"></span></td>
+                        <td><code>/health</code></td>
+                        <td>Overall Health</td>
+                        <td>Aggregated status of all health checks</td>
+                        <td><a href="/health" class="interactive-link" target="_blank">View</a></td>
+                    </tr>
+                    <tr>
+                        <td><span class="health-indicator health-unknown" id="startup-status"></span></td>
+                        <td><code>/health/started</code></td>
+                        <td>Startup Check</td>
+                        <td>Validates EntityManagerFactory initialization</td>
+                        <td><a href="/health/started" class="interactive-link" target="_blank">View</a></td>
+                    </tr>
+                    <tr>
+                        <td><span class="health-indicator health-unknown" id="readiness-status"></span></td>
+                        <td><code>/health/ready</code></td>
+                        <td>Readiness Check</td>
+                        <td>Tests database connectivity via EntityManager</td>
+                        <td><a href="/health/ready" class="interactive-link" target="_blank">View</a></td>
+                    </tr>
+                    <tr>
+                        <td><span class="health-indicator health-unknown" id="liveness-status"></span></td>
+                        <td><code>/health/live</code></td>
+                        <td>Liveness Check</td>
+                        <td>Monitors JVM memory usage (100MB threshold)</td>
+                        <td><a href="/health/live" class="interactive-link" target="_blank">View</a></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="card" style="background-color: #e8f5e8; margin-top: 15px;">
+                <h3>Health Check Implementation Details</h3>
+                
+                <h4>🚀 Startup Health Check</h4>
+                <p><strong>Class:</strong> <code>ProductServiceStartupCheck</code></p>
+                <p><strong>Purpose:</strong> Verifies that the Jakarta Persistence EntityManagerFactory is properly initialized during application startup.</p>
+                <p><strong>Implementation:</strong> Uses <code>@PersistenceUnit</code> to inject EntityManagerFactory and checks if it's not null and open.</p>
+                
+                <h4>✅ Readiness Health Check</h4>
+                <p><strong>Class:</strong> <code>ProductServiceHealthCheck</code></p>
+                <p><strong>Purpose:</strong> Ensures the service is ready to handle requests by testing database connectivity.</p>
+                <p><strong>Implementation:</strong> Performs a lightweight database query using <code>entityManager.find(Product.class, 1L)</code> to verify the database connection.</p>
+                
+                <h4>💓 Liveness Health Check</h4>
+                <p><strong>Class:</strong> <code>ProductServiceLivenessCheck</code></p>
+                <p><strong>Purpose:</strong> Monitors system resources to detect if the application needs to be restarted.</p>
+                <p><strong>Implementation:</strong> Analyzes JVM memory usage with a 100MB available memory threshold, providing detailed memory diagnostics.</p>
+            </div>
+
+            <div class="card" style="background-color: #fff3cd; margin-top: 15px;">
+                <h3>Sample Health Check Response</h3>
+                <p>Example response from <code>/health</code> endpoint:</p>
+                <pre><code>{
+  "status": "UP",
+  "checks": [
+    {
+      "name": "ProductServiceStartupCheck",
+      "status": "UP"
+    },
+    {
+      "name": "ProductServiceReadinessCheck", 
+      "status": "UP"
+    },
+    {
+      "name": "systemResourcesLiveness",
+      "status": "UP",
+      "data": {
+        "FreeMemory": 524288000,
+        "MaxMemory": 2147483648,
+        "AllocatedMemory": 1073741824,
+        "UsedMemory": 549453824,
+        "AvailableMemory": 1598029824
+      }
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <div class="card" style="background-color: #e3f2fd; margin-top: 15px;">
+                <h3>Testing Health Checks</h3>
+                <p>You can test the health check endpoints using curl commands:</p>
+                <pre><code># Test overall health
+curl -X GET http://localhost:9080/health
+
+# Test startup health
+curl -X GET http://localhost:9080/health/started
+
+# Test readiness health  
+curl -X GET http://localhost:9080/health/ready
+
+# Test liveness health
+curl -X GET http://localhost:9080/health/live</code></pre>
+                
+                <p><strong>Integration with Container Orchestration:</strong></p>
+                <p>For Kubernetes deployments, you can configure probes in your deployment YAML:</p>
+                <pre><code>livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 9080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 9080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+startupProbe:
+  httpGet:
+    path: /health/started
+    port: 9080
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  failureThreshold: 30</code></pre>
+            </div>
+
+            <div class="card" style="background-color: #f0f7ff; margin-top: 15px;">
+                <h3>Health Check Benefits</h3>
+                <ul>
+                    <li><strong>Container Orchestration:</strong> Kubernetes and Docker can use these endpoints for health probes</li>
+                    <li><strong>Load Balancer Integration:</strong> Traffic routing based on readiness status</li>
+                    <li><strong>Operational Monitoring:</strong> Early detection of system issues</li>
+                    <li><strong>Startup Validation:</strong> Ensures all dependencies are initialized before serving traffic</li>
+                    <li><strong>Database Monitoring:</strong> Real-time database connectivity verification</li>
+                    <li><strong>Memory Management:</strong> Proactive detection of memory pressure</li>
+                </ul>
+            </div>
         </div>
 
         <div class="card">
@@ -276,6 +454,44 @@ Content-Type: application/json
                 statusDiv.className = 'status maintenance';
                 statusDiv.textContent = 'Service Status: Error';
             });
+
+        // Function to update health check status indicators
+        function updateHealthStatus(endpoint, elementId) {
+            fetch(endpoint)
+                .then(response => response.json())
+                .then(data => {
+                    const indicator = document.getElementById(elementId);
+                    if (data.status === 'UP') {
+                        indicator.className = 'health-indicator health-up';
+                        indicator.title = 'Health check is UP';
+                    } else {
+                        indicator.className = 'health-indicator health-down';
+                        indicator.title = 'Health check is DOWN';
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error checking ${endpoint}:`, error);
+                    const indicator = document.getElementById(elementId);
+                    indicator.className = 'health-indicator health-unknown';
+                    indicator.title = 'Health check status unknown';
+                });
+        }
+
+        // Check health status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateHealthStatus('/health', 'overall-status');
+            updateHealthStatus('/health/started', 'startup-status');
+            updateHealthStatus('/health/ready', 'readiness-status');
+            updateHealthStatus('/health/live', 'liveness-status');
+            
+            // Update health status every 30 seconds
+            setInterval(() => {
+                updateHealthStatus('/health', 'overall-status');
+                updateHealthStatus('/health/started', 'startup-status');
+                updateHealthStatus('/health/ready', 'readiness-status');
+                updateHealthStatus('/health/live', 'liveness-status');
+            }, 30000);
+        });
     </script>
 </body>
 </html>

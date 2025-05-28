@@ -11,13 +11,15 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- * Repository class for Product entity.
+ * In-memory repository implementation for Product entity.
  * Provides in-memory persistence operations using ConcurrentHashMap.
+ * This is used as a fallback when JPA is not available.
  */
 @ApplicationScoped
-public class ProductRepository {
+@InMemory
+public class ProductInMemoryRepository implements ProductRepositoryInterface {
     
-    private static final Logger LOGGER = Logger.getLogger(ProductRepository.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ProductInMemoryRepository.class.getName());
     
     // In-memory storage using ConcurrentHashMap for thread safety
     private final Map<Long, Product> productsMap = new ConcurrentHashMap<>();
@@ -28,12 +30,12 @@ public class ProductRepository {
     /**
      * Constructor with sample data initialization.
      */
-    public ProductRepository() {
-        // Initialize with sample products
+    public ProductInMemoryRepository() {
+        // Initialize with sample products using the Double constructor for compatibility
         createProduct(new Product(null, "iPhone", "Apple iPhone 15", 999.99));
         createProduct(new Product(null, "MacBook", "Apple MacBook Air", 1299.0));
         createProduct(new Product(null, "iPad", "Apple iPad Pro", 799.0));
-        LOGGER.info("ProductRepository initialized with sample products");
+        LOGGER.info("ProductInMemoryRepository initialized with sample products");
     }
     
     /**
@@ -131,8 +133,8 @@ public class ProductRepository {
         return productsMap.values().stream()
             .filter(p -> name == null || p.getName().toLowerCase().contains(name.toLowerCase()))
             .filter(p -> description == null || p.getDescription().toLowerCase().contains(description.toLowerCase()))
-            .filter(p -> minPrice == null || p.getPrice() >= minPrice)
-            .filter(p -> maxPrice == null || p.getPrice() <= maxPrice)
+            .filter(p -> minPrice == null || (p.getPrice() != null && p.getPrice().doubleValue() >= minPrice))
+            .filter(p -> maxPrice == null || (p.getPrice() != null && p.getPrice().doubleValue() <= maxPrice))
             .collect(Collectors.toList());
     }
 }

@@ -1,4 +1,3 @@
--- Sample data for Product Catalog
 INSERT INTO PRODUCTS (NAME, DESCRIPTION, PRICE) VALUES ('iPhone 15', 'Apple iPhone 15 with advanced features', 999.99)
 INSERT INTO PRODUCTS (NAME, DESCRIPTION, PRICE) VALUES ('MacBook Air', 'Apple MacBook Air M2 chip', 1299.00)
 INSERT INTO PRODUCTS (NAME, DESCRIPTION, PRICE) VALUES ('iPad Pro', 'Apple iPad Pro 12.9-inch', 799.00)

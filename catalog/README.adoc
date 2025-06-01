@@ -18,6 +18,7 @@ This project demonstrates the key capabilities of MicroProfile OpenAPI, MicroPro
 * *RESTful API* using Jakarta RESTful Web Services
 * *OpenAPI Documentation* with Swagger UI
 * *MicroProfile Health* with comprehensive startup, readiness, and liveness checks
+* *MicroProfile Metrics* with Timer, Counter, and Gauge metrics for performance monitoring
 * *Dual Persistence Implementation* with configurable JPA/Derby database and in-memory storage options
 * *CDI Qualifiers* for dependency injection and implementation switching
 * *Derby Database Support* with automatic JAR deployment via Liberty Maven plugin
@@ -46,6 +47,16 @@ public Response getAllProducts() {
 ----
 
 The OpenAPI documentation is available at: `/openapi` (in various formats) and `/openapi/ui` (Swagger UI)
+
+=== MicroProfile Metrics
+
+The application implements comprehensive performance monitoring using MicroProfile Metrics with three types of metrics:
+
+* *Timer Metrics* (`@Timed`) - Track response times for product lookups
+* *Counter Metrics* (`@Counted`) - Monitor API usage frequency  
+* *Gauge Metrics* (`@Gauge`) - Real-time catalog size monitoring
+
+Metrics are available at `/metrics` endpoints in Prometheus format for integration with monitoring systems.
 
 === Dual Persistence Architecture
 
@@ -608,6 +619,179 @@ The comprehensive health monitoring provides:
 * *Container Orchestration*: Kubernetes/Docker health probe integration
 * *Load Balancer Integration*: Traffic routing based on health status
 
+=== MicroProfile Metrics
+
+The application implements comprehensive monitoring using MicroProfile Metrics to track application performance and usage patterns. Three types of metrics are implemented to provide insights into the product catalog service behavior.
+
+==== Metrics Implementation
+
+The metrics are implemented using MicroProfile Metrics annotations directly on the REST resource methods:
+
+[source,java]
+----
+@Path("/products")
+@ApplicationScoped
+public class ProductResource {
+    
+    @GET
+    @Path("/{id}")
+    @Timed(name = "productLookupTime", 
+           description = "Time spent looking up products")
+    public Response getProductById(@PathParam("id") Long id) {
+        // Processing delay to demonstrate timing metrics
+        try {
+            Thread.sleep(100); // 100ms processing time
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        // Product lookup logic...
+    }
+    
+    @GET
+    @Counted(name = "productAccessCount", absolute = true,
+             description = "Number of times list of products is requested")
+    public Response getAllProducts() {
+        // Product listing logic...
+    }
+    
+    @GET
+    @Path("/count")
+    @Gauge(name = "productCatalogSize", unit = "none",
+           description = "Current number of products in catalog")
+    public int getProductCount() {
+        // Return current product count...
+    }
+}
+----
+
+==== Metric Types Implemented
+
+*1. Timer Metrics (@Timed)*
+
+The `productLookupTime` timer measures the time spent retrieving individual products:
+
+* *Purpose*: Track performance of product lookup operations
+* *Method*: `getProductById(Long id)`
+* *Use Case*: Identify performance bottlenecks in product retrieval
+* *Processing Delay*: Includes a 100ms processing delay to demonstrate measurable timing
+
+*2. Counter Metrics (@Counted)*
+
+The `productAccessCount` counter tracks how frequently the product list is accessed:
+
+* *Purpose*: Monitor usage patterns and API call frequency
+* *Method*: `getAllProducts()`
+* *Configuration*: Uses `absolute = true` for consistent naming
+* *Use Case*: Understanding service load and usage patterns
+
+*3. Gauge Metrics (@Gauge)*
+
+The `productCatalogSize` gauge provides real-time catalog size information:
+
+* *Purpose*: Monitor the current state of the product catalog
+* *Method*: `getProductCount()`
+* *Unit*: Specified as "none" for simple count values
+* *Use Case*: Track catalog growth and current inventory levels
+
+==== Metrics Configuration
+
+The metrics feature is configured in the Liberty `server.xml`:
+
+[source,xml]
+----
+<server>
+    <!-- MicroProfile Metrics configuration -->
+    <mpMetrics authentication="false" />
+    
+    <!-- Other server configuration... -->
+</server>
+----
+
+*Key Configuration Features:*
+* *Authentication Disabled*: Allows easy access to metrics endpoints for development
+* *Default Endpoints*: Standard MicroProfile Metrics endpoints are automatically enabled
+
+==== Metrics Endpoints
+
+The metrics are accessible via standard MicroProfile Metrics endpoints:
+
+* `/metrics` - All metrics in Prometheus format
+* `/metrics?scope=application` - Application-specific metrics only
+* `/metrics?scope=vendor` - Vendor-specific metrics (Open Liberty)
+* `/metrics?scope=base` - Base system metrics (JVM, memory, etc.)
+* `/metrics?name=<metric_name>` - Specific metric by name
+* `/metrics?scope=<scope>&name=<metric_name>` - Specific metric from specific scope
+
+==== Sample Metrics Output
+
+Example metrics output from `/metrics?scope=application`:
+
+[source,prometheus]
+----
+# TYPE application_productLookupTime_rate_per_second gauge
+application_productLookupTime_rate_per_second 0.0
+
+# TYPE application_productLookupTime_one_min_rate_per_second gauge  
+application_productLookupTime_one_min_rate_per_second 0.0
+
+# TYPE application_productLookupTime_five_min_rate_per_second gauge
+application_productLookupTime_five_min_rate_per_second 0.0
+
+# TYPE application_productLookupTime_fifteen_min_rate_per_second gauge
+application_productLookupTime_fifteen_min_rate_per_second 0.0
+
+# TYPE application_productLookupTime_seconds summary
+application_productLookupTime_seconds_count 5
+application_productLookupTime_seconds_sum 0.52487
+application_productLookupTime_seconds{quantile="0.5"} 0.1034
+application_productLookupTime_seconds{quantile="0.75"} 0.1089
+application_productLookupTime_seconds{quantile="0.95"} 0.1123
+application_productLookupTime_seconds{quantile="0.98"} 0.1123
+application_productLookupTime_seconds{quantile="0.99"} 0.1123
+application_productLookupTime_seconds{quantile="0.999"} 0.1123
+
+# TYPE application_productAccessCount_total counter
+application_productAccessCount_total 15
+
+# TYPE application_productCatalogSize gauge
+application_productCatalogSize 3
+----
+
+==== Testing Metrics
+
+You can test the metrics implementation using curl commands:
+
+[source,bash]
+----
+# View all metrics
+curl -X GET http://localhost:5050/metrics
+
+# View only application metrics
+curl -X GET http://localhost:5050/metrics?scope=application
+
+# View specific metric by name
+curl -X GET "http://localhost:5050/metrics?name=productAccessCount"
+
+# View specific metric from application scope
+curl -X GET "http://localhost:5050/metrics?scope=application&name=productLookupTime"
+
+# Generate some metric data by calling endpoints
+curl -X GET http://localhost:5050/api/products        # Increments counter
+curl -X GET http://localhost:5050/api/products/1      # Records timing
+curl -X GET http://localhost:5050/api/products/count  # Updates gauge
+----
+
+==== Metrics Benefits
+
+The metrics implementation provides:
+
+* *Performance Monitoring*: Track response times and identify slow operations
+* *Usage Analytics*: Understand API usage patterns and frequency
+* *Capacity Planning*: Monitor catalog size and growth trends
+* *Operational Insights*: Real-time visibility into service behavior
+* *Integration Ready*: Prometheus-compatible format for monitoring systems
+* *Troubleshooting*: Correlation of performance issues with usage patterns
+
 === MicroProfile Config
 
 The application uses MicroProfile Config to externalize configuration:
@@ -821,6 +1005,30 @@ curl -X GET http://localhost:5050/health/started
 * `/health/live` - Liveness checks (memory monitoring)
 * `/health/ready` - Readiness checks (database connectivity)  
 * `/health/started` - Startup checks (EntityManagerFactory initialization)
+
+*Metrics Testing:*
+[source,bash]
+----
+# View all metrics
+curl -X GET http://localhost:5050/metrics
+
+# View only application metrics
+curl -X GET http://localhost:5050/metrics?scope=application
+
+# View specific metrics by name
+curl -X GET "http://localhost:5050/metrics?name=productAccessCount"
+
+# Generate metric data by calling endpoints
+curl -X GET http://localhost:5050/api/products        # Increments counter
+curl -X GET http://localhost:5050/api/products/1      # Records timing
+curl -X GET http://localhost:5050/api/products/count  # Updates gauge
+----
+
+* `/metrics` - All metrics (application + vendor + base)
+* `/metrics?scope=application` - Application-specific metrics only
+* `/metrics?scope=vendor` - Open Liberty vendor metrics
+* `/metrics?scope=base` - Base JVM and system metrics
+* `/metrics/base` - Base JVM and system metrics
 
 To view the Swagger UI, open the following URL in your browser:
 http://localhost:5050/openapi/ui

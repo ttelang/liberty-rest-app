@@ -9,12 +9,16 @@
         <feature>mpConfig</feature>
         <feature>mpOpenAPI</feature>
         <feature>mpHealth</feature>
+        <feature>mpMetrics</feature>
         <feature>persistence</feature>
         <feature>jdbc</feature>
     </featureManager>
 
     <httpEndpoint httpPort="${default.http.port}" httpsPort="${default.https.port}"
                   id="defaultHttpEndpoint" host="*" />
+
+    <!-- Disable authentication for metrics endpoint -->
+    <mpMetrics authentication="false" />
 
     <!-- Derby DataSource Configuration -->
     <dataSource id="DefaultDataSource" jndiName="jdbc/catalogDB" type="javax.sql.DataSource">

@@ -11,6 +11,9 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.metrics.annotation.Counted;
+import org.eclipse.microprofile.metrics.annotation.Gauge;
+import org.eclipse.microprofile.metrics.annotation.Timed;
 
 import io.microprofile.tutorial.store.product.entity.Product;
 import io.microprofile.tutorial.store.product.service.ProductService;
@@ -63,6 +66,10 @@ public class ProductResource {
             content = @Content(mediaType = "application/json")
         )
     })
+    // Expose the invocation count as a counter metric
+    @Counted(name = "productAccessCount",
+        absolute = true,
+        description = "Number of times the list of products is requested")
     public Response getAllProducts() {
         LOGGER.log(Level.INFO, "REST: Fetching all products");
         List<Product> products = productService.findAllProducts();
@@ -87,8 +94,22 @@ public class ProductResource {
     }
 
     @GET
+    @Path("/count")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Gauge(name = "productCatalogSize", 
+        unit = "none", 
+    description = "Current number of products in the catalog")
+    public long getProductCount() {
+        return productService.findAllProducts().size();
+    }
+
+    @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
+    @Timed(name = "productLookupTime",
+            tags = {"method=getProduct"},
+            absolute = true, 
+            description = "Time spent looking up products")
     @Operation(summary = "Get product by ID", description = "Returns a product by its ID")
     @APIResponses({
         @APIResponse(responseCode = "200", description = "Product found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Product.class))),

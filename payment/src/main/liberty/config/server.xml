@@ -8,6 +8,8 @@
         <feature>cdi</feature>
         <feature>mpConfig</feature>
         <feature>mpOpenAPI</feature>
+        <feature>mpHealth</feature>
+        <feature>mpFaultTolerance</feature>
     </featureManager>
 
     <httpEndpoint httpPort="${default.http.port}" httpsPort="${default.https.port}"

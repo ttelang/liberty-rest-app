@@ -21,6 +21,13 @@ public class PaymentServiceConfigSource implements ConfigSource {
        // Load payment service configurations dynamically
        // This example uses hardcoded values for demonstration
        properties.put("payment.gateway.endpoint", "https://api.paymentgateway.com");
+       
+       // Fault Tolerance Configuration
+       properties.put("payment.retry.maxRetries", "3");
+       properties.put("payment.retry.delay", "2000");
+       properties.put("payment.circuitbreaker.failureRatio", "0.5");
+       properties.put("payment.circuitbreaker.requestVolumeThreshold", "4");
+       properties.put("payment.timeout.duration", "3000");
    }
 
     @Override

@@ -1,46 +1,73 @@
 package io.microprofile.tutorial.store.payment.service;
 
-import jakarta.enterprise.context.RequestScoped;
-import jakarta.inject.Inject;
+import io.microprofile.tutorial.store.payment.exception.PaymentProcessingException;
+import io.microprofile.tutorial.store.payment.entity.PaymentDetails;
+import io.microprofile.tutorial.store.payment.exception.CriticalPaymentException;
+
+import org.eclipse.microprofile.faulttolerance.Asynchronous;
+import org.eclipse.microprofile.faulttolerance.Bulkhead;
+import org.eclipse.microprofile.faulttolerance.Fallback;
+import org.eclipse.microprofile.faulttolerance.Retry;
+import org.eclipse.microprofile.faulttolerance.Timeout;
+
+import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.core.Response;
 
-import org.eclipse.microprofile.openapi.annotations.Operation;
-import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
-import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
-
-@RequestScoped
-@Path("/authorize")
+@ApplicationScoped
 public class PaymentService {
-    
-    @Inject
-    @ConfigProperty(name = "payment.gateway.endpoint")
+
+    @ConfigProperty(name = "payment.gateway.endpoint", defaultValue = "https://defaultapi.paymentgateway.com")
     private String endpoint;
 
-    @POST
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Process payment", description = "Process payment using the payment gateway API")
-    @APIResponses(value = {
-        @APIResponse(responseCode = "200", description = "Payment processed successfully"),
-        @APIResponse(responseCode = "400", description = "Invalid input data"),
-        @APIResponse(responseCode = "500", description = "Internal server error")
-    })
-    public Response processPayment() {
+    /**
+     * Process the payment request.
+     *
+     * @param paymentDetails details of the payment
+     * @return response message indicating success or failure
+     * @throws PaymentProcessingException if a transient issue occurs
+     */
+    @Asynchronous
+    @Timeout(3000)
+    @Retry(maxRetries = 3, delay = 2000, jitter = 500, retryOn = PaymentProcessingException.class, abortOn = CriticalPaymentException.class)
+    @Fallback(fallbackMethod = "fallbackProcessPayment")
+    @Bulkhead(value=5)
+    public CompletionStage<String> processPayment(PaymentDetails paymentDetails) throws PaymentProcessingException {
+        simulateDelay();
 
-        // Example logic to call the payment gateway API
-        System.out.println("Calling payment gateway API at: " + endpoint);
-        // Assuming a successful payment operation for demonstration purposes
-        // Actual implementation would involve calling the payment gateway and handling the response
+        System.out.println("Processing payment for amount: " + paymentDetails.getAmount());
 
-        // Dummy response for successful payment processing
-        String result = "{\"status\":\"success\", \"message\":\"Payment processed successfully.\"}";
-        return Response.ok(result, MediaType.APPLICATION_JSON).build();
+        // Simulating a transient failure
+        if (Math.random() > 0.7) {
+            throw new PaymentProcessingException("Temporary payment processing failure");
+        }
+
+        // Simulating successful processing
+        return CompletableFuture.completedFuture("{\"status\":\"success\", \"message\":\"Payment processed successfully.\"}");
+    }
+
+    /**
+     * Fallback method when payment processing fails.
+     *
+     * @param paymentDetails details of the payment
+     * @return response message for fallback
+     */
+    public CompletionStage<String> fallbackProcessPayment(PaymentDetails paymentDetails) {
+        System.out.println("Fallback invoked for payment of amount: " + paymentDetails.getAmount());
+        return CompletableFuture.completedFuture("{\"status\":\"failed\", \"message\":\"Payment service is currently unavailable.\"}");
+    }
+
+    /**
+     * Simulate a delay in processing to demonstrate timeout.
+     */
+    private void simulateDelay() {
+        try {
+            Thread.sleep(1500); // Simulated long-running task
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Processing interrupted");
+        }
     }
 }

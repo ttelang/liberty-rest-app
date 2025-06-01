@@ -85,20 +85,23 @@
 <body>
     <header>
         <h1>Payment Service</h1>
-        <p>MicroProfile Config Demo with Custom ConfigSource</p>
+        <p>MicroProfile Config & Fault Tolerance Demo</p>
     </header>
     
     <div class="container">
         <div class="card">
             <h2>About this Service</h2>
-            <p>The Payment Service demonstrates MicroProfile Config integration with custom ConfigSource implementation.</p>
-            <p>It provides endpoints for managing payment configuration and processing payments using dynamic configuration.</p>
+            <p>The Payment Service demonstrates MicroProfile Config integration with custom ConfigSource implementation and comprehensive Fault Tolerance patterns.</p>
+            <p>It provides endpoints for managing payment configuration and processing payments with retry policies, circuit breakers, and fallback mechanisms.</p>
             <p><strong>Key Features:</strong></p>
             <ul>
                 <li>Custom MicroProfile ConfigSource with ordinal 600 (highest priority)</li>
                 <li>Dynamic configuration updates via REST API</li>
                 <li>Payment gateway endpoint configuration</li>
                 <li>Real-time configuration access for payment processing</li>
+                <li><strong>MicroProfile Fault Tolerance with Retry Policies</strong></li>
+                <li><strong>Circuit Breaker protection for external services</strong></li>
+                <li><strong>Timeout protection and Fallback mechanisms</strong></li>
             </ul>
         </div>
         
@@ -107,9 +110,54 @@
             <ul class="endpoints">
                 <li><span class="method get">GET</span> /api/payment-config - Get current payment configuration</li>
                 <li><span class="method post">POST</span> /api/payment-config - Update payment configuration property</li>
-                <li><span class="method post">POST</span> /api/authorize - Process payment authorization</li>
+                <li><span class="method post">POST</span> /api/authorize - Process payment authorization (with retry)</li>
+                <li><span class="method post">POST</span> /api/verify - Verify payment transaction (aggressive retry)</li>
+                <li><span class="method post">POST</span> /api/capture - Capture payment (circuit breaker + timeout)</li>
+                <li><span class="method post">POST</span> /api/refund - Process payment refund (conservative retry)</li>
                 <li><span class="method post">POST</span> /api/payment-config/process-example - Example payment processing with config</li>
             </ul>
+        </div>
+
+        <div class="card">
+            <h2>Fault Tolerance Features</h2>
+            <p>The Payment Service implements comprehensive fault tolerance patterns:</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div style="background-color: #e8f4f8; padding: 15px; border-radius: 5px;">
+                    <h4 style="color: #0066cc; margin-top: 0;">🔄 Retry Policies</h4>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Authorization:</strong> 3 retries, 1s delay</li>
+                        <li><strong>Verification:</strong> 5 retries, 500ms delay</li>
+                        <li><strong>Capture:</strong> 2 retries, 2s delay</li>
+                        <li><strong>Refund:</strong> 1 retry, 3s delay</li>
+                    </ul>
+                </div>
+                <div style="background-color: #fff2e8; padding: 15px; border-radius: 5px;">
+                    <h4 style="color: #ff6600; margin-top: 0;">⚡ Circuit Breaker</h4>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Failure Ratio:</strong> 50%</li>
+                        <li><strong>Request Threshold:</strong> 4 requests</li>
+                        <li><strong>Recovery Delay:</strong> 5 seconds</li>
+                        <li><strong>Applied to:</strong> Payment capture</li>
+                    </ul>
+                </div>
+                <div style="background-color: #f0f8e8; padding: 15px; border-radius: 5px;">
+                    <h4 style="color: #009900; margin-top: 0;">⏱️ Timeout Protection</h4>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Capture Timeout:</strong> 3 seconds</li>
+                        <li><strong>Max Retry Duration:</strong> 10-15 seconds</li>
+                        <li><strong>Jitter:</strong> 200-500ms randomization</li>
+                    </ul>
+                </div>
+                <div style="background-color: #f8e8f8; padding: 15px; border-radius: 5px;">
+                    <h4 style="color: #990099; margin-top: 0;">🛟 Fallback Mechanisms</h4>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Authorization:</strong> Service unavailable</li>
+                        <li><strong>Verification:</strong> Queue for retry</li>
+                        <li><strong>Capture:</strong> Defer operation</li>
+                        <li><strong>Refund:</strong> Manual processing</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
         <div class="card">
@@ -117,9 +165,21 @@
             <p>This service implements a custom MicroProfile ConfigSource that allows dynamic configuration updates:</p>
             <ul>
                 <li><strong>Configuration Priority:</strong> Custom ConfigSource (600) > System Properties (400) > Environment Variables (300) > microprofile-config.properties (100)</li>
-                <li><strong>Current Properties:</strong> payment.gateway.endpoint</li>
+                <li><strong>Payment Properties:</strong> payment.gateway.endpoint, payment.retry.*, payment.circuitbreaker.*, payment.timeout.*</li>
                 <li><strong>Update Method:</strong> POST to /api/payment-config with {"key": "payment.property.name", "value": "new-value"}</li>
             </ul>
+        </div>
+
+        <div class="card">
+            <h2>Testing Fault Tolerance</h2>
+            <p>Test the fault tolerance features with these examples:</p>
+            <ul>
+                <li><strong>Trigger Retries:</strong> Use card number ending in "0000" for authorization failures</li>
+                <li><strong>Circuit Breaker:</strong> Make multiple capture requests to trigger circuit opening</li>
+                <li><strong>Timeouts:</strong> Capture operations may timeout randomly for testing</li>
+                <li><strong>Fallbacks:</strong> All operations provide graceful degradation responses</li>
+            </ul>
+            <p><strong>Monitor logs:</strong> <code>tail -f target/liberty/wlp/usr/servers/mpServer/logs/messages.log</code></p>
         </div>
         
         <div class="card">

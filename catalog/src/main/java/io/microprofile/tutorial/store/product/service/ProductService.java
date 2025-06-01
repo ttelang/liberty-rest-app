@@ -8,6 +8,8 @@ import jakarta.inject.Inject;
 import java.util.List;
 import java.util.logging.Logger;
 
+import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
+
 /**
  * Service class for Product operations.
  * Contains business logic for product management.
@@ -37,8 +39,20 @@ public class ProductService {
      * @param id Product ID
      * @return The product or null if not found
      */
-    public Product findProductById(Long id) {
+    @CircuitBreaker(
+        requestVolumeThreshold = 10,
+        failureRatio = 0.5,
+        delay = 5000,
+        successThreshold = 2,
+        failOn = RuntimeException.class
+    )
+     public Product findProductById(Long id) {
         LOGGER.info("Service: Finding product with ID: " + id);
+
+        // Logic to call the product details service
+        if (Math.random() > 0.7) {
+            throw new RuntimeException("Simulated service failure");
+        }
         return repository.findProductById(id);
     }
     

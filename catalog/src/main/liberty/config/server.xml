@@ -10,6 +10,7 @@
         <feature>mpOpenAPI</feature>
         <feature>mpHealth</feature>
         <feature>mpMetrics</feature>
+        <feature>mpFaultTolerance</feature>
         <feature>persistence</feature>
         <feature>jdbc</feature>
     </featureManager>

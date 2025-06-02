@@ -71,6 +71,9 @@ The service exposes the following RESTful endpoints:
 | `/api/users` | POST | Create a new user
 | `/api/users/{id}` | PUT | Update an existing user
 | `/api/users/{id}` | DELETE | Delete a user
+| `/api/users/profile` | GET | Get authenticated user's profile (generic auth)
+| `/api/users/user-profile` | GET | Simple JWT demo endpoint
+| `/api/users/jwt` | GET | Get demo JWT token
 |===
 
 == Running the Service
@@ -83,12 +86,14 @@ The service exposes the following RESTful endpoints:
 
 === Local Development
 
-1. Clone the repository:
+1. Download the source code:
 +
 [source,bash]
 ----
-git clone https://github.com/your-org/liberty-rest-app.git
-cd liberty-rest-app/user
+# Download the code branch as ZIP and extract
+curl -L https://github.com/ttelang/microprofile-tutorial/archive/refs/heads/code.zip -o microprofile-tutorial.zip
+unzip microprofile-tutorial.zip
+cd microprofile-tutorial-code/user
 ----
 
 2. Build the project:
@@ -134,8 +139,65 @@ The service can be configured using Liberty server.xml and MicroProfile Config:
 The main configuration file at `src/main/liberty/config/server.xml` includes:
 
 * HTTP endpoint configuration (port 6050)
-* Feature enablement
+* Feature enablement (including `mpJwt-2.1` for JWT support)
 * Application context configuration
+* JWT authentication configuration
+
+=== MicroProfile JWT Configuration
+
+The service includes MicroProfile JWT 2.1 support for token-based authentication. JWT configuration in `server.xml`:
+
+[source,xml]
+----
+<mpJwt id="myMpJwt"
+       jwksUri="https://example.com/.well-known/jwks.json"
+       issuer="https://example.com"
+       audiences="user-service"
+       userNameAttribute="sub"
+       groupNameAttribute="groups"/>
+----
+
+==== JWT Configuration Parameters:
+
+* **`jwksUri`**: URL endpoint where JWT signing keys are published (JWKS endpoint)
+  - Example: `https://your-auth-server.com/.well-known/jwks.json`
+  - The service fetches public keys from this URL to verify JWT signatures
+  - Common with OAuth2/OpenID Connect providers (Keycloak, Auth0, etc.)
+
+* **`issuer`**: Expected issuer of JWT tokens (must match the `iss` claim in tokens)
+  - Example: `https://your-auth-server.com`
+  - Used to validate that tokens come from the expected authorization server
+
+* **`audiences`**: Expected audience for JWT tokens (must match the `aud` claim)
+  - Example: `user-service` or `microprofile-tutorial`
+  - Ensures tokens are intended for this specific service
+
+* **`userNameAttribute`**: JWT claim that contains the username
+  - Default: `sub` (subject claim)
+  - Used by `SecurityContext.getUserPrincipal().getName()`
+
+* **`groupNameAttribute`**: JWT claim that contains user roles/groups
+  - Default: `groups`
+  - Used for role-based authorization
+
+==== Development Configuration:
+
+For development and testing, you can use a shared secret instead of JWKS:
+
+[source,xml]
+----
+<mpJwt id="myMpJwt"
+       sharedKey="your-secret-key-here"
+       issuer="https://example.com"
+       audiences="user-service"/>
+----
+
+==== Common JWKS Providers:
+
+* **Keycloak**: `https://your-keycloak.com/realms/your-realm/protocol/openid-connect/certs`
+* **Auth0**: `https://your-domain.auth0.com/.well-known/jwks.json`
+* **Google**: `https://www.googleapis.com/oauth2/v3/certs`
+* **Microsoft**: `https://login.microsoftonline.com/common/discovery/v2.0/keys`
 
 === MicroProfile Config
 
@@ -185,7 +247,13 @@ Common error scenarios:
 
 == Testing
 
-=== Running Tests
+=== Prerequisites for Testing
+
+* Service running on http://localhost:6050
+* curl command-line tool or Postman
+* (Optional) JWT token for authentication endpoints
+
+=== Running Unit Tests
 
 Execute unit and integration tests with:
 
@@ -194,18 +262,22 @@ Execute unit and integration tests with:
 mvn test
 ----
 
-=== Testing with cURL
+=== Manual Testing with cURL
+
+==== Basic CRUD Operations
 
 *Get all users:*
 [source,bash]
 ----
-curl -X GET http://localhost:6050/user/api/users
+curl -X GET http://localhost:6050/user/api/users \
+  -H "Accept: application/json"
 ----
 
 *Get user by ID:*
 [source,bash]
 ----
-curl -X GET http://localhost:6050/user/api/users/1
+curl -X GET http://localhost:6050/user/api/users/1 \
+  -H "Accept: application/json"
 ----
 
 *Create new user:*
@@ -213,10 +285,11 @@ curl -X GET http://localhost:6050/user/api/users/1
 ----
 curl -X POST http://localhost:6050/user/api/users \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
   -d '{
     "name": "John Doe",
     "email": "john@example.com",
-    "passwordHash": "hashed_password",
+    "passwordHash": "mypassword123",
     "address": "123 Main St",
     "phone": "+1234567890"
   }'
@@ -227,12 +300,13 @@ curl -X POST http://localhost:6050/user/api/users \
 ----
 curl -X PUT http://localhost:6050/user/api/users/1 \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
   -d '{
     "name": "John Updated",
-    "email": "john@example.com",
-    "passwordHash": "hashed_password",
+    "email": "john.updated@example.com",
+    "passwordHash": "newpassword456",
     "address": "456 New Address",
-    "phone": "+1234567890"
+    "phone": "+1987654321"
   }'
 ----
 
@@ -240,6 +314,200 @@ curl -X PUT http://localhost:6050/user/api/users/1 \
 [source,bash]
 ----
 curl -X DELETE http://localhost:6050/user/api/users/1
+----
+
+==== Authentication and Profile Endpoints
+
+*Get demo JWT token:*
+[source,bash]
+----
+curl -X GET http://localhost:6050/user/api/users/jwt \
+  -H "Accept: application/json"
+----
+
+*Test generic authentication profile (works with any auth):*
+[source,bash]
+----
+# Without authentication (should return 401)
+curl -X GET http://localhost:6050/user/api/users/profile \
+  -H "Accept: application/json"
+
+# With basic authentication (if configured)
+curl -X GET http://localhost:6050/user/api/users/profile \
+  -H "Accept: application/json" \
+  -u "username:password"
+----
+
+*Test JWT-specific profile endpoint:*
+[source,bash]
+----
+# Simple JWT demo - returns plain text
+curl -X GET http://localhost:6050/user/api/users/user-profile \
+  -H "Accept: text/plain" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+----
+
+==== Testing Error Scenarios
+
+*Test user not found:*
+[source,bash]
+----
+curl -X GET http://localhost:6050/user/api/users/999 \
+  -H "Accept: application/json" \
+  -w "\nHTTP Status: %{http_code}\n"
+----
+
+*Test duplicate email:*
+[source,bash]
+----
+# First, create a user
+curl -X POST http://localhost:6050/user/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test User",
+    "email": "test@example.com",
+    "passwordHash": "password123"
+  }'
+
+# Then try to create another user with the same email
+curl -X POST http://localhost:6050/user/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Another User",
+    "email": "test@example.com",
+    "passwordHash": "password456"
+  }' \
+  -w "\nHTTP Status: %{http_code}\n"
+----
+
+*Test invalid input:*
+[source,bash]
+----
+curl -X POST http://localhost:6050/user/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "",
+    "email": "invalid-email",
+    "passwordHash": ""
+  }' \
+  -w "\nHTTP Status: %{http_code}\n"
+----
+
+=== Testing with Postman
+
+For a more user-friendly testing experience, you can import the following collection into Postman:
+
+1. Create a new Postman collection named "User Management Service"
+2. Add the following requests:
+
+==== Environment Variables
+Set up these Postman environment variables:
+* `baseUrl`: `http://localhost:6050/user/api`
+* `userId`: `1` (or any valid user ID)
+
+==== Sample Requests
+
+*GET All Users*
+- Method: GET
+- URL: `{{baseUrl}}/users`
+- Headers: `Accept: application/json`
+
+*POST Create User*
+- Method: POST  
+- URL: `{{baseUrl}}/users`
+- Headers: `Content-Type: application/json`
+- Body (raw JSON):
+[source,json]
+----
+{
+  "name": "Jane Smith",
+  "email": "jane@example.com", 
+  "passwordHash": "securepassword",
+  "address": "789 Oak Avenue",
+  "phone": "+1555000123"
+}
+----
+
+*GET User Profile (Generic Auth)*
+- Method: GET
+- URL: `{{baseUrl}}/users/profile`
+- Headers: `Accept: application/json`
+- Auth: Configure as needed (Basic, Bearer Token, etc.)
+
+*GET JWT Demo*
+- Method: GET  
+- URL: `{{baseUrl}}/users/user-profile`
+- Headers: `Accept: text/plain`
+- Auth: Bearer Token with JWT
+
+=== Load Testing
+
+For performance testing, you can use tools like Apache Bench (ab) or wrk:
+
+*Basic load test with Apache Bench:*
+[source,bash]
+----
+# Test GET all users with 100 requests, 10 concurrent
+ab -n 100 -c 10 http://localhost:6050/user/api/users
+
+# Test user creation with 50 requests, 5 concurrent
+ab -n 50 -c 5 -p user.json -T application/json http://localhost:6050/user/api/users
+----
+
+Where `user.json` contains:
+[source,json]
+----
+{
+  "name": "Load Test User",
+  "email": "loadtest@example.com",
+  "passwordHash": "testpassword"
+}
+----
+
+=== Integration Testing
+
+To test service integration with other microservices:
+
+*Health check:*
+[source,bash]
+----
+curl -X GET http://localhost:6050/health
+----
+
+*OpenAPI specification:*
+[source,bash]
+----
+curl -X GET http://localhost:6050/openapi
+----
+
+=== Expected Response Formats
+
+==== Successful User Response
+[source,json]
+----
+{
+  "userId": 1,
+  "name": "John Doe",
+  "email": "john@example.com",
+  "passwordHash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+  "address": "123 Main St",
+  "phone": "+1234567890"
+}
+----
+
+==== Error Response
+[source,json]  
+----
+{
+  "message": "User not found",
+  "status": 404
+}
+----
+
+==== JWT Demo Response
+[source,text]
+----
+User: 1234567890, Roles: [admin, user], Tenant: tenant123
 ----
 
 == Implementation Notes

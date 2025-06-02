@@ -66,6 +66,18 @@ public class UserService {
     }
 
     /**
+     * Gets a user by email.
+     *
+     * @param email The user email
+     * @return The user
+     * @throws WebApplicationException if the user is not found
+     */
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new WebApplicationException("User not found", Response.Status.NOT_FOUND));
+    }
+
+    /**
      * Updates a user.
      *
      * @param id The user ID

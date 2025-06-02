@@ -1,0 +1,1001 @@
+= Chapter 9: MicroProfile Telemetry
+
+Microservices-based applications offer improved scalability, flexibility, and resilience, but they introduce significant challenges regarding availability and performance monitoring across distributed system boundaries. This makes observability critical to ensure these distributed systems operate reliably and perform optimally.
+
+MicroProfile Telemetry specification provides a vendor-neutral API for automatically instrumenting, collecting, and exporting telemetry data including distributed traces, metrics, and logs. It is built on the foundation of https://opentelemetry.io/[OpenTelemetry] from the https://www.cncf.io/[Cloud Native Computing Foundation (CNCF)], an industry-standard observability framework.
+
+In this chapter, we will explore the fundamentals of MicroProfile Telemetry, covering topics such as tracing concepts, instrumenting telemetry, setting up tracing providers, context propagation and correlation, analyzing traces, security considerations for tracing, and more. By the end of this chapter, you will learn how to effectively leverage distributed tracing for debugging, performance monitoring, and system optimization.
+
+== Topics Covered in This Chapter
+
+* **Introduction to MicroProfile Telemetry**: Understanding the specification and its role in observability
+* **Tracing Concepts**: Fundamental building blocks of distributed tracing
+** **Spans**: Individual units of work within a distributed system
+** **Traces**: Complete request journeys across multiple services
+** **Context Propagation**: Maintaining trace correlation across service boundaries
+** **Correlation**: Linking related operations and maintaining request identity
+* **Automatic Instrumentation**: Zero-code telemetry with MicroProfile Telemetry 1.1
+* **Configuration and Setup**: Server and application-level telemetry configuration
+* **Tools for Trace Analysis**: Using Jaeger for trace visualization and analysis
+* **Exporting Traces**: OpenTelemetry Protocol (OTLP) and trace export mechanisms
+* **Types of Telemetry Data**: Traces, metrics, and logs in observability
+* **Integration Patterns**: MicroProfile Telemetry with Fault Tolerance and other specifications
+* **Analyzing Traces**: Performance monitoring, bottleneck identification, and debugging techniques
+* **Production Considerations**: Sampling, performance optimization, and resource management
+* **Security Considerations**: Protecting sensitive data in traces and secure trace export
+
+== Introduction to MicroProfile Telemetry
+
+MicroProfile Telemetry addresses the operational challenges inherent in modern microservices architectures. Without proper observability, debugging, performance monitoring, and ensuring system reliability become complex and time-consuming.
+
+=== Key Challenges in Microservices Applications
+
+Some of the key challenges in microservices-based applications include:
+
+* **Complexity Due to Distributed Architecture**: Microservices are often deployed across multiple nodes, containers, or cloud environments, making it challenging to track requests as they move through the system. This lack of visibility increases debugging complexity, making it harder to identify bottlenecks and analyze system behavior.
+
+* **Polyglot Architecture**: Microservices are developed using multiple programming languages (e.g., Java, Python, and Go) and frameworks, resulting in inconsistent telemetry data and a lack of standardization in observability. This fragmentation makes correlating logs, traces, and metrics across services difficult.
+
+* **Network Latency and Service Dependencies**: Communication between microservices involves network latency, and all of this adds up as requests traverse several services. This accumulated latency makes it difficult to identify the root causes of performance issues and optimize system response times.
+
+* **Ensuring High Availability**: Failures in one microservice can cascade and affect the entire system, impacting multiple dependent microservices. This can lead to downtime or degraded performance, resulting in lost revenue and diminished user trust.
+
+* **Context Loss Across Service Boundaries**: Without proper context propagation, it becomes impossible to correlate related operations across different services, making end-to-end request tracking and debugging extremely challenging.
+
+=== How MicroProfile Telemetry Addresses These Challenges
+
+To address these challenges, MicroProfile Telemetry specification provides a standardized set of APIs for capturing telemetry data, including distributed trace information and automatic context propagation, to improve observability in distributed systems. By enabling seamless tracing, developers can:
+
+* **Analyze System Behavior**: Gain comprehensive insights into request flows across service boundaries
+* **Troubleshoot Service Interactions**: Quickly identify failed or slow service calls and their impact
+* **Ensure Application Reliability**: Monitor system health and performance proactively
+* **Optimize Performance**: Identify bottlenecks and latency sources in distributed request paths
+
+=== Vendor Neutrality and Flexibility
+
+MicroProfile Telemetry is vendor-neutral and built on OpenTelemetry standards. It allows developers to switch between different OpenTelemetry implementations and observability platforms without modifying their application code. This flexibility ensures that MicroProfile applications can easily integrate with various observability tools (like Jaeger, Zipkin, or commercial APM solutions), making it easier to adopt, scale, and maintain telemetry in modern cloud-native environments.
+
+== Understanding MicroProfile Telemetry
+
+=== Core Telemetry Concepts
+
+==== Understanding Spans
+
+A **span** is the fundamental building block of distributed tracing. It represents a single unit of work within your application, such as:
+
+* Processing an HTTP request
+* Executing a database query
+* Making a call to an external service
+* Running a specific method or function
+
+Each span contains several key pieces of information:
+
+* **Operation Name**: A human-readable description of the operation
+* **Start and End Timestamps**: When the operation began and completed
+* **Span Context**: Unique identifiers that link spans together
+* **Attributes**: Key-value pairs providing additional metadata
+* **Events**: Time-stamped log entries within the span
+* **Status**: Whether the operation succeeded, failed, or encountered an error
+
+Here's an example of what a span might look like for a payment processing operation:
+
+```
+Span: process_payment
+├── Start Time: 2024-01-15T10:30:00.123Z
+├── End Time: 2024-01-15T10:30:00.456Z
+├── Duration: 333ms
+├── Attributes:
+│   ├── payment.amount: 99.99
+│   ├── payment.currency: USD
+│   ├── customer.id: 12345
+│   └── http.method: POST
+├── Events:
+│   ├── [10:30:00.200Z] Validating payment details
+│   ├── [10:30:00.300Z] Calling payment gateway
+│   └── [10:30:00.420Z] Payment authorized
+└── Status: OK
+```
+
+==== Understanding Traces
+
+A **trace** represents the complete journey of a request as it flows through your distributed system. It's composed of multiple spans that are linked together to show the full path of execution.
+
+Think of a trace as a tree structure:
+* The **root span** represents the initial request (e.g., a user making a purchase)
+* **Child spans** represent subsequent operations triggered by the request
+* **Sibling spans** represent parallel operations at the same level
+
+For example, when a user makes a purchase in an e-commerce system, the trace might look like this:
+
+```
+Trace: User Purchase Request
+├── [Root] HTTP POST /purchase
+    ├── [Child] Validate user session
+    ├── [Child] Check inventory
+    │   ├── [Child] Query inventory database
+    │   └── [Child] Update stock levels
+    ├── [Child] Process payment
+    │   ├── [Child] Validate payment details
+    │   ├── [Child] Call payment gateway API
+    │   └── [Child] Store payment record
+    └── [Child] Send confirmation email
+        ├── [Child] Generate email content
+        └── [Child] Call email service API
+```
+
+Each trace has a unique **trace ID** that identifies it across all services and systems it touches. This allows you to follow a single request from start to finish, even as it crosses multiple service boundaries.
+
+==== Context Propagation
+
+**Context propagation** is the mechanism that ensures tracing information flows correctly through your distributed system. Without proper context propagation, you'd end up with disconnected spans instead of a cohesive trace.
+
+The trace context includes:
+* **Trace ID**: Unique identifier for the entire trace
+* **Span ID**: Unique identifier for the current span
+* **Parent Span ID**: Links the current span to its parent
+* **Trace Flags**: Additional metadata about trace processing
+
+Context propagation works in several ways:
+
+**1. HTTP Header Propagation**
+When services communicate over HTTP, trace context is carried in headers:
+```
+HTTP Headers:
+traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+tracestate: rojo=00f067aa0ba902b7,congo=t61rcWkgMzE
+```
+
+**2. In-Process Propagation**
+Within a single service, context is maintained across:
+* Method calls within the same thread
+* Asynchronous operations using CompletableFuture or similar
+* CDI bean interactions
+* Database operations
+
+**3. Cross-Service Propagation**
+When calling external services, MicroProfile Telemetry automatically:
+* Adds trace headers to outbound HTTP requests
+* Extracts trace context from incoming requests
+* Maintains parent-child relationships between spans
+
+==== Correlation and Causality
+
+One of the most powerful aspects of distributed tracing is its ability to show **correlation** and **causality** between operations across your system.
+
+**Correlation** helps you understand which operations are related:
+* All spans with the same trace ID are part of the same user request
+* Parent-child relationships show which operations triggered others
+* Timing information reveals dependencies and bottlenecks
+
+**Causality** shows the cause-and-effect relationships:
+* If span A starts before span B and they share a trace, A may have caused B
+* Parent spans represent operations that trigger child operations
+* Sibling spans may be parallel operations or sequential steps
+
+This correlation enables powerful debugging and analysis capabilities:
+
+**Example: Debugging a Slow Request**
+```
+Trace Analysis for Slow Purchase Request (2.3s total):
+├── HTTP POST /purchase (2.3s) - Root cause investigation needed
+    ├── Validate user session (50ms) - Normal
+    ├── Check inventory (100ms) - Normal
+    │   ├── Query inventory database (80ms) - Normal
+    │   └── Update stock levels (20ms) - Normal
+    ├── Process payment (2.1s) - BOTTLENECK IDENTIFIED
+    │   ├── Validate payment details (30ms) - Normal
+    │   ├── Call payment gateway API (2.0s) - SLOW EXTERNAL SERVICE
+    │   └── Store payment record (70ms) - Normal
+    └── Send confirmation email (50ms) - Normal
+```
+
+From this trace, you can immediately see that the payment gateway API call is the bottleneck, accounting for most of the request's duration.
+
+=== MicroProfile Telemetry 1.1 Features
+
+MicroProfile Telemetry 1.1 (included in MicroProfile 6.1) provides:
+
+* **Automatic Instrumentation**: Zero-code instrumentation for JAX-RS endpoints and CDI beans
+* **OpenTelemetry Integration**: Built on OpenTelemetry SDK with industry-standard trace formats
+* **OTLP Export**: Native support for OpenTelemetry Protocol (OTLP) for trace export
+* **Configuration-Based Setup**: Extensive configuration options through MicroProfile Config
+* **Context Propagation**: Automatic trace context propagation across service boundaries
+* **Resource Attributes**: Service identification and metadata attachment to traces
+
+== Setting Up MicroProfile Telemetry
+
+=== 1. Server Configuration
+
+Enable MicroProfile Telemetry in your Liberty server configuration:
+
+[source,xml]
+----
+<server description="MicroProfile Tutorial Liberty Server">
+    <featureManager>
+        <platform>jakartaEE-10.0</platform>
+        <platform>microProfile-6.1</platform>
+        <feature>mpTelemetry</feature>
+        <!-- Other features -->
+    </featureManager>
+
+    <!-- MicroProfile Telemetry Configuration -->
+    <mpTelemetry serviceName="payment-service">
+        <otlpExporter endpoint="http://localhost:4318/v1/traces" />
+        <resource>
+            <attribute name="service.name" value="payment-service" />
+            <attribute name="service.version" value="1.0.0" />
+            <attribute name="deployment.environment" value="development" />
+        </resource>
+    </mpTelemetry>
+</server>
+----
+
+=== 2. Application Configuration
+
+Configure telemetry behavior through `microprofile-config.properties`:
+
+[source,properties]
+----
+# MicroProfile Telemetry Configuration
+otel.service.name=payment-service
+otel.exporter.otlp.traces.endpoint=http://localhost:4318/v1/traces
+otel.traces.exporter=otlp
+otel.metrics.exporter=none
+otel.logs.exporter=none
+
+# Instrumentation Settings
+otel.instrumentation.jaxrs.enabled=true
+otel.instrumentation.cdi.enabled=true
+otel.traces.sampler=always_on
+
+# Resource Attributes
+otel.resource.attributes=service.name=payment-service,service.version=1.0.0,deployment.environment=development
+
+# HTTP Header Capture
+otel.instrumentation.http.capture_headers.server.request=content-type,user-agent
+otel.instrumentation.http.capture_headers.server.response=content-type
+----
+
+== Automatic Instrumentation
+
+=== What Gets Traced Automatically
+
+MicroProfile Telemetry 1.1 provides automatic instrumentation for:
+
+1. **JAX-RS Endpoints**: HTTP requests and responses
+2. **CDI Bean Methods**: Business logic method calls
+3. **Context Propagation**: Trace context across method boundaries
+4. **Error Conditions**: Exceptions and error states
+
+=== Example Service Implementation
+
+[source,java]
+----
+@ApplicationScoped
+public class PaymentService {
+
+    private static final Logger logger = Logger.getLogger(PaymentService.class.getName());
+
+    @ConfigProperty(name = "payment.gateway.endpoint", defaultValue = "https://api.paymentgateway.com")
+    private String endpoint;
+
+    /**
+     * Process payment request - automatically traced by MicroProfile Telemetry
+     * Spans are created automatically for this CDI method
+     */
+    @Asynchronous
+    @Timeout(3000)
+    @Retry(maxRetries = 3, delay = 2000, jitter = 500, retryOn = PaymentProcessingException.class)
+    @Fallback(fallbackMethod = "fallbackProcessPayment")
+    public CompletionStage<String> processPayment(PaymentDetails paymentDetails) throws PaymentProcessingException {
+        // Business context added through structured logging
+        String maskedCardNumber = maskCardNumber(paymentDetails.getCardNumber());
+        
+        logger.info(() -> String.format("Processing payment - Amount: %s, Gateway: %s, Card: %s", 
+                paymentDetails.getAmount(), endpoint, maskedCardNumber));
+        
+        // Each method call creates child spans automatically
+        simulateDelay();
+        
+        // Business logic with automatic error tracing
+        if (Math.random() > 0.7) {
+            logger.warning("Payment processing failed due to transient error");
+            throw new PaymentProcessingException("Temporary payment processing failure");
+        }
+
+        logger.info("Payment processed successfully");
+        return CompletableFuture.completedFuture("{\"status\":\"success\", \"message\":\"Payment processed successfully.\"}");
+    }
+
+    /**
+     * Multi-step verification process - each step is automatically traced
+     */
+    @Asynchronous
+    public CompletionStage<String> verifyPaymentWithTelemetry(PaymentDetails paymentDetails, String transactionId) 
+            throws PaymentProcessingException {
+        
+        logger.info(() -> String.format("Starting payment verification - Transaction ID: %s", transactionId));
+        
+        try {
+            // Each method call becomes a child span
+            validatePaymentDetails(paymentDetails);
+            performFraudCheck(paymentDetails, transactionId);
+            verifyFundsAvailability(paymentDetails);
+            recordTransaction(paymentDetails, transactionId);
+            
+            logger.info("Payment verification completed successfully");
+            return CompletableFuture.completedFuture(
+                    String.format("{\"status\":\"verified\", \"transaction_id\":\"%s\"}", transactionId));
+        } catch (Exception e) {
+            logger.severe(() -> String.format("Payment verification failed: %s", e.getMessage()));
+            throw e;
+        }
+    }
+    
+    // All private methods are automatically traced when called from instrumented methods
+    private void validatePaymentDetails(PaymentDetails details) throws PaymentProcessingException {
+        logger.info("Validating payment details");
+        // Validation logic
+    }
+    
+    private void performFraudCheck(PaymentDetails details, String transactionId) throws PaymentProcessingException {
+        logger.info(() -> String.format("Performing fraud check for transaction: %s", transactionId));
+        simulateNetworkCall(300);
+        // Fraud check logic
+    }
+}
+----
+
+== Manual Instrumentation with OpenTelemetry APIs
+
+While MicroProfile Telemetry 1.1 provides comprehensive automatic instrumentation for JAX-RS endpoints and CDI beans, there are scenarios where manual instrumentation provides additional value:
+
+* **Fine-grained business logic tracing**: Capturing specific business operations within automatically traced methods
+* **External service calls**: Adding detailed context for third-party integrations
+* **Custom span attributes**: Enriching traces with business-specific metadata
+* **Complex async operations**: Manual span management for intricate asynchronous workflows
+* **Performance measurement**: Measuring specific code sections for optimization
+
+=== Step 1: Add the Required Dependencies
+
+While MicroProfile Telemetry is included with your MicroProfile platform, manual instrumentation requires explicit access to OpenTelemetry API classes:
+
+[source,xml]
+----
+<!-- MicroProfile platform includes MicroProfile Telemetry -->
+<dependency>
+    <groupId>org.eclipse.microprofile</groupId>
+    <artifactId>microprofile</artifactId>
+    <version>6.1</version>
+    <type>pom</type>
+    <scope>provided</scope>
+</dependency>
+
+<!-- Required for manual instrumentation - OpenTelemetry API classes -->
+<dependency>
+    <groupId>io.opentelemetry</groupId>
+    <artifactId>opentelemetry-api</artifactId>
+    <version>1.32.0</version>
+    <scope>compile</scope>
+</dependency>
+----
+
+**Important**: The `opentelemetry-api` dependency must use `scope=compile` to make the API classes available for manual instrumentation, even though the runtime implementation is provided by MicroProfile Telemetry.
+
+=== Step 2: Accessing the Tracer Programmatically
+
+**Important**: In MicroProfile Telemetry 1.1, CDI injection of `Tracer` is not supported. Instead, use programmatic access via `GlobalOpenTelemetry`:
+
+[source,java]
+----
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.annotation.PostConstruct;
+import java.util.logging.Logger;
+
+@ApplicationScoped
+public class PaymentService {
+
+    private static final Logger logger = Logger.getLogger(PaymentService.class.getName());
+    
+    private Tracer tracer;  // Get programmatically, not via @Inject
+
+    @PostConstruct
+    public void init() {
+        // Programmatic tracer access - the correct approach
+        this.tracer = GlobalOpenTelemetry.getTracer("payment-service", "1.0.0");
+        logger.info("Tracer initialized successfully");
+    }
+
+    /**
+     * Enhanced payment processing with manual instrumentation
+     * This method is automatically traced, but we add custom spans for detailed insights
+     */
+    public void processPaymentWithDetailedTracing(String orderId, double amount) {
+        // Create a custom span for the payment validation phase
+        Span validationSpan = tracer.spanBuilder("payment.validation")
+                .setSpanKind(SpanKind.INTERNAL)
+                .startSpan();
+        
+        try {
+            // Add business context to the span
+            validationSpan.setAttribute("order.id", orderId);
+            validationSpan.setAttribute("payment.amount", amount);
+            validationSpan.setAttribute("payment.currency", "USD");
+            validationSpan.setAttribute("validation.type", "comprehensive");
+
+            // Perform validation with detailed tracing
+            validatePaymentDetails(orderId, amount);
+            
+            validationSpan.setAttribute("validation.status", "SUCCESS");
+        } catch (Exception e) {
+            validationSpan.setAttribute("validation.status", "FAILED");
+            validationSpan.setAttribute("error.type", e.getClass().getSimpleName());
+            validationSpan.recordException(e);
+            throw e;
+        } finally {
+            validationSpan.end();
+        }
+
+        // Create another span for the actual payment processing
+        Span processingSpan = tracer.spanBuilder("payment.gateway.call").startSpan();
+        
+        try {
+            processingSpan.setAttribute("order.id", orderId);
+            processingSpan.setAttribute("gateway.provider", "stripe");
+            processingSpan.setAttribute("payment.method", "credit_card");
+
+            // Simulate gateway call with timing
+            long startTime = System.currentTimeMillis();
+            executePaymentGatewayCall(orderId, amount);
+            long duration = System.currentTimeMillis() - startTime;
+            
+            processingSpan.setAttribute("gateway.response_time_ms", duration);
+            processingSpan.setAttribute("payment.status", "SUCCESS");
+            
+            // Add an event to mark successful processing
+            processingSpan.addEvent("Payment gateway returned success");
+            
+        } catch (Exception e) {
+            processingSpan.setAttribute("payment.status", "FAILED");
+            processingSpan.setAttribute("error.message", e.getMessage());
+            processingSpan.recordException(e);
+            throw e;
+        } finally {
+            processingSpan.end();
+        }
+    }
+
+    private void validatePaymentDetails(String orderId, double amount) {
+        // Validation logic
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Payment amount must be positive");
+        }
+    }
+
+    private void executePaymentGatewayCall(String orderId, double amount) {
+        // Simulate external gateway call
+        System.out.println("Processing payment for Order ID: " + orderId + ", Amount: " + amount);
+    }
+}
+----
+
+=== Step 3: Creating and Managing Spans
+
+**Basic Span Creation**:
+
+[source,java]
+----
+// Create a span for a specific operation
+Span span = tracer.spanBuilder("business.operation.name")
+    .setSpanKind(SpanKind.INTERNAL)  // Optional: specify span type
+    .startSpan();
+
+try {
+    // Your business logic here
+    performBusinessOperation();
+} finally {
+    span.end();  // Always end the span
+}
+----
+
+**Advanced Span Configuration**:
+
+[source,java]
+----
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.common.AttributeKey;
+
+public void advancedSpanExample(String customerId, String productId) {
+    Span span = tracer.spanBuilder("inventory.check")
+        .setSpanKind(SpanKind.CLIENT)  // This operation calls external service
+        .setAttribute("customer.id", customerId)
+        .setAttribute("product.id", productId)
+        .setAttribute("operation.type", "availability_check")
+        .startSpan();
+
+    try {
+        // Add dynamic attributes based on business logic
+        if (isPremiumCustomer(customerId)) {
+            span.setAttribute("customer.tier", "premium");
+            span.setAttribute("priority.level", "high");
+        }
+
+        // Add events to mark important moments
+        span.addEvent("Starting inventory query");
+        
+        boolean available = checkInventoryAvailability(productId);
+        
+        span.addEvent("Inventory query completed");
+        span.setAttribute("inventory.available", available);
+        span.setAttribute("inventory.check.result", available ? "success" : "out_of_stock");
+
+    } catch (Exception e) {
+        // Record exceptions with context
+        span.setAttribute("error", true);
+        span.setAttribute("error.type", e.getClass().getSimpleName());
+        span.recordException(e);
+        throw e;
+    } finally {
+        span.end();
+    }
+}
+----
+
+=== Step 4: Adding Rich Span Attributes
+
+**Standard Attributes**: Use semantic conventions for consistency:
+
+[source,java]
+----
+// HTTP-related attributes
+span.setAttribute("http.method", "POST");
+span.setAttribute("http.url", "/api/payment/process");
+span.setAttribute("http.status_code", 200);
+
+// Database-related attributes
+span.setAttribute("db.system", "postgresql");
+span.setAttribute("db.statement", "SELECT * FROM payments WHERE order_id = ?");
+span.setAttribute("db.name", "payment_db");
+
+// Business-specific attributes
+span.setAttribute("business.transaction.id", transactionId);
+span.setAttribute("business.customer.tier", customerTier);
+span.setAttribute("business.payment.amount", paymentAmount);
+----
+
+**Custom Attribute Helper**:
+
+[source,java]
+----
+public class TelemetryHelper {
+    
+    public static void addPaymentContext(Span span, PaymentDetails payment) {
+        span.setAttribute("payment.amount", payment.getAmount());
+        span.setAttribute("payment.currency", payment.getCurrency());
+        span.setAttribute("payment.method", payment.getPaymentMethod());
+        span.setAttribute("customer.id", payment.getCustomerId());
+        span.setAttribute("order.id", payment.getOrderId());
+        
+        // Add masked card info for security
+        String maskedCard = maskCardNumber(payment.getCardNumber());
+        span.setAttribute("payment.card.masked", maskedCard);
+    }
+    
+    public static void addErrorContext(Span span, Exception error) {
+        span.setAttribute("error", true);
+        span.setAttribute("error.type", error.getClass().getSimpleName());
+        span.setAttribute("error.message", error.getMessage());
+        span.recordException(error);
+    }
+    
+    private static String maskCardNumber(String cardNumber) {
+        if (cardNumber == null || cardNumber.length() < 4) {
+            return "INVALID";
+        }
+        return "****-****-****-" + cardNumber.substring(cardNumber.length() - 4);
+    }
+}
+----
+
+=== Step 5: Span Lifecycle Management
+
+**Proper Exception Handling**:
+
+[source,java]
+----
+public String processComplexPayment(PaymentRequest request) {
+    Span span = tracer.spanBuilder("payment.complex.process").startSpan();
+    
+    try (var scope = span.makeCurrent()) {  // Make span current for context propagation
+        span.setAttribute("request.id", request.getId());
+        span.setAttribute("processing.type", "complex");
+        
+        // Add event to mark processing start
+        span.addEvent("Complex payment processing started");
+        
+        // Business logic here
+        String result = performComplexPaymentLogic(request);
+        
+        // Mark successful completion
+        span.setAttribute("processing.status", "completed");
+        span.addEvent("Complex payment processing completed successfully");
+        
+        return result;
+        
+    } catch (PaymentValidationException e) {
+        span.setAttribute("error.category", "validation");
+        span.addEvent("Payment validation failed");
+        TelemetryHelper.addErrorContext(span, e);
+        throw e;
+        
+    } catch (PaymentGatewayException e) {
+        span.setAttribute("error.category", "gateway");
+        span.addEvent("Payment gateway error occurred");
+        TelemetryHelper.addErrorContext(span, e);
+        throw e;
+        
+    } catch (Exception e) {
+        span.setAttribute("error.category", "unexpected");
+        span.addEvent("Unexpected error during payment processing");
+        TelemetryHelper.addErrorContext(span, e);
+        throw e;
+        
+    } finally {
+        span.end();
+    }
+}
+----
+
+=== Integration with Automatic Instrumentation
+
+**Best Practices**: Manual spans work seamlessly with automatic instrumentation:
+
+[source,java]
+----
+@ApplicationScoped
+public class PaymentService {
+
+    @Inject
+    Tracer tracer;
+
+    /**
+     * This method is automatically traced by MicroProfile Telemetry
+     * Manual spans become children of the automatic span
+     */
+    @Asynchronous
+    @Timeout(5000)
+    @Retry(maxRetries = 3)
+    public CompletionStage<PaymentResult> processPayment(PaymentDetails details) {
+        
+        // The automatic instrumentation creates a parent span for this method
+        // Our manual spans become children, creating a detailed trace hierarchy
+        
+        // Manual span for validation (child of automatic span)
+        Span validationSpan = tracer.spanBuilder("payment.validation.detailed").startSpan();
+        try {
+            TelemetryHelper.addPaymentContext(validationSpan, details);
+            validatePaymentDetails(details);
+        } finally {
+            validationSpan.end();
+        }
+
+        // Manual span for gateway interaction (child of automatic span)
+        Span gatewaySpan = tracer.spanBuilder("payment.gateway.interaction").startSpan();
+        try {
+            gatewaySpan.setAttribute("gateway.vendor", "stripe");
+            return callPaymentGateway(details);
+        } finally {
+            gatewaySpan.end();
+        }
+    }
+}
+----
+
+**Resulting Trace Hierarchy**:
+----
+payment-service: PaymentService.processPayment (automatic)
+├── payment-service: payment.validation.detailed (manual)
+├── payment-service: payment.gateway.interaction (manual)
+└── [Fault Tolerance spans if retry/timeout triggered] (automatic)
+----
+
+=== When to Use Manual vs Automatic Instrumentation
+
+**Use Automatic Instrumentation** (MicroProfile Telemetry default):
+- JAX-RS endpoint tracing
+- CDI bean method calls
+- Standard HTTP client calls
+- Basic error tracking
+
+**Use Manual Instrumentation** for:
+- Business-specific operations that need detailed tracking
+- Complex multi-step processes requiring granular visibility
+- External service calls that need custom attributes
+- Performance-critical code sections requiring precise measurement
+- Custom context propagation scenarios
+
+**Hybrid Approach** (Recommended):
+- Let automatic instrumentation handle standard framework operations
+- Add manual spans for business-critical operations
+- Use manual attributes to enrich automatic spans with business context
+- Combine both for comprehensive observability
+
+== Tools for Trace Analysis
+
+The following tools are commonly used for trace collection, visualization, and analysis in MicroProfile applications:
+
+=== OpenTelemetry Collector
+
+The https://opentelemetry.io/docs/collector/[OpenTelemetry Collector] is an open-source telemetry processing system that acts as an intermediary between instrumented applications and observability backends such as Jaeger, Zipkin, and Prometheus. It is designed to receive, process, and export tracing data, making it a powerful tool for managing distributed traces in MicroProfile applications.
+
+It is vendor-agnostic, which allows for seamless integration with multiple tracing backends without requiring any changes to application instrumentation. It supports multiple data formats, enabling the ingestion of traces through several protocols, ensuring compatibility across different telemetry sources. Additionally, it offers processing pipelines that let developers filter, batch, and transform trace data before exporting it, optimizing observability workflows.
+
+Designed for scalability, the OpenTelemetry Collector can be deployed as a standalone instance or distributed across multiple nodes, making it suitable for both small-scale applications and large enterprise-grade distributed systems.
+
+=== Jaeger
+
+https://www.jaegertracing.io/[Jaeger] is an open-source distributed tracing system developed by Uber, widely used for monitoring microservices and visualizing request flows in cloud-native applications. It provides a powerful visualization interface that enables developers to inspect traces, analyze dependencies between services, and examine execution timelines, making it an essential tool for debugging performance bottlenecks.
+
+One of Jaeger's key capabilities is service dependency analysis, which helps identify how microservices interact, providing insights into latency, failures, and request propagation. It also supports adaptive sampling strategies, allowing developers to control the volume of traces collected to optimize performance without overwhelming storage and processing resources. Additionally, Jaeger offers built-in storage options, allowing trace data to be stored in Elasticsearch, Cassandra, or Kafka, making it scalable and flexible for various deployment environments.
+
+=== Zipkin
+
+https://zipkin.io/[Zipkin] is a distributed tracing system designed to help developers visualize and diagnose latency issues in microservices-based applications. It provides a lightweight and fast tracing solution, making it ideal for quick deployment with minimal resource usage. Its simplicity and efficiency make it a popular choice for teams looking to implement tracing without significant infrastructure overhead.
+
+One of Zipkin's core strengths is its tag-based searching, which allows developers to filter traces based on metadata such as service name, request ID, or other custom attributes, enabling quick identification of relevant traces. It also offers dependency graph visualization, helping to uncover bottlenecks and inefficiencies in microservices interactions. To accommodate different storage needs, Zipkin supports multiple storage backends, including Elasticsearch, MySQL, and Cassandra, providing flexibility for various deployment scenarios.
+
+=== Grafana Tempo
+
+https://grafana.com/oss/tempo/[Grafana Tempo] is a distributed tracing backend. Unlike Jaeger and Zipkin, Tempo does not require indexing as it only requires object storage, making it highly scalable and cost-efficient for handling large volumes of trace data. This unique approach allows Tempo to store traces efficiently without increasing storage and query overhead, making it an ideal choice for high-performance microservices environments.
+
+One of Tempo's key advantages is its tight integration with Grafana dashboards, enabling developers to correlate logs, metrics, and traces within a unified observability platform. Additionally, Tempo offers multi-backend support, meaning it can ingest and process trace data from OpenTelemetry, Jaeger, and Zipkin sources, ensuring compatibility with existing tracing setups. Its scalability makes it well-suited for large-scale microservices architectures, where efficiently managing distributed tracing data is crucial.
+
+== Exporting the Traces
+
+To export the traces we need to configure the exporter type and endpoint in the `src/main/resources/META-INF/microprofile-config.properties`.
+For using OTLP (OpenTelemetry Protocol) export, you need to add the following configuration:
+
+[source,properties]
+----
+# Enable OpenTelemetry 
+otel.traces.exporter=otlp
+
+# Set the OTLP exporter endpoint
+otel.exporter.otlp.endpoint=http://localhost:4317 
+
+# Define the service name
+otel.service.name=payment-service 
+
+# Sampling rate: (1.0 = always, 0.5 = 50%, 0.0 = never)
+otel.traces.sampler=parentbased_always_on
+----
+
+This sends traces directly to an observability tool, enabling real-time distributed tracing and performance monitoring. To ensure proper tracing, your observability tool (for e.g. Jaeger) must be running to receive trace data.
+
+Using OTLP is advantageous because it is the native standard for OpenTelemetry, ensuring seamless integration with a wide range of observability tools. One of its key benefits is that it allows developers to use multiple observability platforms without changing instrumentation, providing a unified and vendor-neutral tracing solution.
+
+=== Verify the Traces
+
+Once tracing is enabled and the appropriate exporter is configured, the next step is to verify that traces are being captured and sent to the observability backend. This ensures that the MicroProfile Telemetry setup is functioning correctly and that distributed tracing data is available for monitoring and debugging.
+
+==== Run Jaeger
+
+The simplest way to run Jaeger is with Docker using the command as below:
+
+[source, bash]
+----
+docker run -d --name jaeger \
+  -e COLLECTOR_ZIPKIN_HTTP_PORT=9411 \
+  -p 5775:5775/udp \
+  -p 6831:6831/udp \
+  -p 6832:6832/udp \
+  -p 5778:5778 \
+  -p 16686:16686 \
+  -p 14268:14268 \
+  -p 14250:14250 \
+  -p 9411:9411 \
+  jaegertracing/all-in-one:latest
+----
+
+The above command runs the *all-in-one* Jaeger container, which includes the agent, collector, query service, and UI.
+
+The Jaeger UI can be accessed at: `http://<hostname>:16686`. 
+
+Ensure all the services of our MicroProfile E-commerce applications are running.
+
+Search using parameters like operation name, time range, or service for the traces associated with different microservices and confirm that the telemetry data is visible.
+View a detailed breakdown of each span within the trace, including timing and attributes.
+
+== Analyzing Traces
+
+Once trace data is collected and exported to a backend system, analyzing these traces becomes a crucial step in understanding the behavior of your distributed microservices architecture. By examining traces, you can gain insights into system performance, identify bottlenecks, and detect failures or anomalies.
+
+=== Visualizing Traces
+
+Tracing backends like *Jaeger*, *Zipkin*, or *Grafana Tempo* provide visual interfaces to explore and analyze traces. These tools display traces as timelines or dependency graphs, making it easier to:
+
+* Understand the sequence of operations.
+* Identify the services and components involved in a request.
+* Observe how requests propagate through the system.
+
+=== Identifying Bottlenecks
+
+Traces highlight spans with long durations or repeated retries, which often point to bottlenecks or inefficiencies. Pay close attention to:
+
+* *Critical Path*: The longest path in a trace that determines the total response time.
+* *Service Dependencies*: Examine how upstream and downstream services interact to find slow components.
+* *Retries and Failures*: Repeated spans or high failure rates indicate problematic dependencies or transient errors.
+
+=== Diagnosing Failures
+
+Traces provide valuable information for diagnosing failures, including:
+
+* *Error Codes*: Look for spans with error attributes, such as `http.status_code=500`.
+* *Exception Details*: Many tracing systems capture stack traces or error messages in spans.
+* *Service Impact*: Identify which upstream and downstream services are affected by the failure.
+
+=== Understanding Service Dependencies
+
+Dependency graphs generated from traces show the interactions between services. These graphs help:
+
+* Visualize which services depend on each other.
+* Detects circular dependencies or excessive coupling.
+* Plan optimizations by focusing on critical services.
+
+=== Correlating Traces with Logs and Metrics
+
+Traces, when combined with logs and metrics, provide a comprehensive picture of the system:
+
+* *Logs*: Use trace IDs and span IDs in logs to correlate application logs with specific spans.
+* *Metrics*: Correlate trace performance data with system metrics like CPU usage, memory consumption, or request rates.
+
+Example: If a span indicates high latency, check corresponding logs and metrics to identify the underlying cause, such as a resource constraint or network delay.
+
+=== Best Practices for Analyzing Traces
+
+. *Establish Baselines*: Use traces to establish performance baselines for services.
+. *Monitor Critical Paths*: Focus on traces that traverse critical services or user-facing operations.
+. *Use Sampling Strategically*: Balance trace volume and storage costs by sampling traces intelligently.
+. *Automate Alerts*: Set up alerts for abnormal patterns in traces, such as increased latency or failure rates.
+. *Collaborate Across Teams*: Share trace insights with development, operations, and QA teams to improve system reliability.
+
+By analyzing traces effectively, you can identify opportunities to optimize your microservices, ensure smoother operations, and enhance the overall user experience. Tracing tools provide a powerful way to visualize and understand the intricate dynamics of distributed systems.
+
+When analyzing traces, developers should look for the following:
+
+* *Long spans:* Spans that take a long time to complete may indicate a performance issue.
+* *Missing spans:* Missing spans can make it difficult to understand the flow of a request.
+* *Errors:* Errors can indicate problems with a service or a request.
+* *High latency:* High latency can indicate a problem with the network or a service.
+
+By analyzing traces, developers can identify and troubleshoot problems with their microservices applications. This can help developers improve the performance and reliability of their applications.
+
+Here are some tips for analyzing traces:
+
+* *Use a trace viewer:* A trace viewer is a tool that can help you visualize and analyze traces.
+* *Look for patterns:* Look for patterns in the traces that may indicate a problem.
+* *Correlate traces with metrics:* Correlate traces with metrics to get a better understanding of the performance of your application.
+* *Use sampling:* Use sampling to reduce the number of traces that are collected. This can improve the performance of your tracing system.
+
+By following these tips, developers can effectively analyze traces to improve the performance and reliability of their microservices applications.
+
+== Security Considerations for Tracing
+
+When implementing tracing in your applications, it is crucial to be mindful of security implications. Tracing involves collecting and storing data about application behavior, which can potentially expose sensitive information if not handled properly.
+
+* *Data Sensitivity:* Be cautious about the data included in traces. Avoid logging sensitive information such as passwords, API keys, or personally identifiable information (PII).
+* *Access Control:* Implement strict access controls to limit who can view and manage trace data.
+* *Encryption:* Consider encrypting trace data at rest and in transit to protect it from unauthorized access.
+* *Storage:* Carefully manage the storage of trace data. Avoid storing traces indefinitely and implement data retention policies.
+* *Third-Party Services:* If using third-party tracing services, ensure they have robust security measures in place to protect your data.
+
+=== Avoid Capturing Sensitive Data
+
+Traces often include attributes and metadata that can contain sensitive information. Avoid storing or transmitting sensitive details, such as:
+
+* Personally Identifiable Information (PII) (e.g., names, addresses, social security numbers).
+* Payment information (e.g., credit card numbers).
+* Authentication credentials (e.g., passwords, API keys, tokens).
+
+*Best Practice:*
+
+Sanitize attributes before adding them to spans:
+
+[source,java]
+----
+span.setAttribute("user.id", "anonymized-user-id");
+span.setAttribute("credit.card.last4", "****1234");
+----
+
+=== Encrypt Trace Data
+
+To prevent unauthorized access during transmission, ensure that telemetry data is encrypted. Use secure protocols such as HTTPS or TLS for exporting trace data to a backend.
+ 
+*Example:*
+
+Configure the tracing provider to use encrypted connections:
+
+[source,properties]
+----
+otel.exporter.jaeger.endpoint=https://secure-jaeger-collector.example.com
+otel.exporter.otlp.endpoint=https://secure-collector.example.com
+----
+
+=== Limit Trace Retention
+
+Trace data can grow rapidly in distributed systems. Retaining it indefinitely increases the risk of exposing sensitive information. Implement retention policies to:
+
+* Retain traces only for the necessary duration for debugging or performance analysis.
+* Periodically purge older traces from storage.
+
+=== Access Control and Auditing
+
+Restrict access to trace data to authorized personnel only. Ensure that your tracing backend implements robust authentication and authorization mechanisms.
+
+*Best Practice:*
+
+* Use role-based access control (RBAC) to define permissions for viewing and managing traces.
+* Audit access to trace data regularly to identify potential misuse or breaches.
+
+=== Sampling Strategies to Minimize Exposure
+
+Sampling reduces the volume of traces collected and limits the exposure of sensitive data by capturing only a subset of requests. Common strategies include:
+
+* Random Sampling: Captures a fixed percentage of traces.
+* Rate-Limiting Sampling: Limits the number of traces per second.
+* Key-Based Sampling: Samples traces based on specific attributes (e.g., user ID).
+
+*Example:*
+
+Random sampling to limit the amount of trace data collected:
+
+[source,properties]
+----
+otel.traces.sampler=traceidratio
+otel.traces.sampler.traceidratio=0.1
+----
+
+=== Compliance with Regulations
+
+Ensure that your tracing practices comply with data protection and privacy regulations such as GDPR, CCPA, or HIPAA. Key considerations include:
+
+* Anonymizing sensitive data before tracing.
+* Informing users about telemetry collection in your privacy policy.
+* Providing mechanisms to opt out of tracing where required.
+
+=== Isolate Tracing Infrastructure
+
+The tracing infrastructure, such as Jaeger or OpenTelemetry Collector, should be isolated from the public internet and accessible only within secure networks. 
+
+*Best Practice:*
+
+* Deploy tracing backends in private subnets or behind firewalls.
+* Use VPNs or dedicated connections for remote access to tracing dashboards.
+
+=== Monitor and Alert on Trace Anomalies
+
+Tracing can help detect potential security incidents. Monitor traces for unusual patterns, such as:
+
+* Unexpected spikes in requests.
+* Requests from unknown or unauthorized sources.
+* Abnormal response times indicating possible exploits.
+
+Set up alerts for these anomalies to investigate and mitigate potential issues.
+
+By following these security considerations, you can leverage the benefits of distributed tracing without compromising the security of your system or the privacy of your users. Careful handling of trace data, coupled with robust encryption, access controls, and compliance practices, ensures that tracing remains a valuable yet secure component of your observability strategy.
+
+== Conclusion
+
+MicroProfile Telemetry provides a robust foundation for observability in Java-based microservices, enabling developers to implement distributed tracing seamlessly. By leveraging this specification, you can gain deep insights into the flow of requests, identify bottlenecks, and enhance the reliability and performance of your applications. The integration of standardized tracing concepts like spans, traces, and context propagation ensures that developers can maintain a cohesive understanding of their system's behavior across service boundaries.
+
+Through instrumentation, context propagation, and effective trace analysis, MicroProfile Telemetry simplifies the complexities of monitoring and debugging distributed systems. It empowers teams to proactively address issues, optimize performance, and improve the user experience. Moreover, by adhering to security best practices, developers can ensure that telemetry data is protected, compliant with regulations, and free of sensitive information.
+
+In this chapter, we explored the critical security considerations surrounding tracing within the MicroProfile Telemetry framework. We emphasized the importance of safeguarding sensitive data by avoiding the inclusion of Personally Identifiable Information (PII) in trace spans. Additionally, we discussed the potential security risks associated with tracing in production environments and the significance of carefully managing sampling rates and data retention policies. By adhering to these security best practices, developers can harness the power of tracing for observability while ensuring the confidentiality and integrity of their applications.
+
+As microservices architectures continue to evolve, the ability to observe and trace system interactions will remain a critical factor in maintaining resilient and efficient applications. MicroProfile Telemetry stands as a valuable tool in achieving these goals, providing developers with the observability they need to deliver reliable, high-performance microservices in modern cloud-native environments.
+
+

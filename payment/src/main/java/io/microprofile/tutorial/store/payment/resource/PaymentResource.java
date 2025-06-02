@@ -15,12 +15,14 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.math.BigDecimal;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.UUID;
 
 @RequestScoped
 @Path("/")
@@ -74,6 +76,59 @@ public class PaymentResource {
         } catch (Exception e) {
             // Handle other exceptions
             throw new PaymentProcessingException("Payment processing failed: " + e.getMessage());
+        }
+    }
+
+    @POST
+    @Path("/payments")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Process payment with full details", description = "Process payment with comprehensive telemetry tracing")
+    @APIResponses(value = {
+        @APIResponse(responseCode = "200", description = "Payment processed successfully"),
+        @APIResponse(responseCode = "400", description = "Invalid payment details"),
+        @APIResponse(responseCode = "500", description = "Payment processing failed")
+    })
+    public Response processPaymentWithDetails(PaymentDetails paymentDetails) 
+        throws PaymentProcessingException {
+        
+        try {
+            // Use PaymentService with full fault tolerance and telemetry
+            CompletionStage<String> result = paymentService.processPayment(paymentDetails);
+            String paymentResult = result.toCompletableFuture().get();
+            
+            return Response.ok(paymentResult, MediaType.APPLICATION_JSON).build();
+            
+        } catch (Exception e) {
+            throw new PaymentProcessingException("Payment processing failed: " + e.getMessage());
+        }
+    }
+
+    @POST
+    @Path("/verify")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Verify payment with telemetry", description = "Comprehensive payment verification with distributed tracing")
+    @APIResponses(value = {
+        @APIResponse(responseCode = "200", description = "Payment verified successfully"),
+        @APIResponse(responseCode = "400", description = "Payment verification failed"),
+        @APIResponse(responseCode = "500", description = "Verification process error")
+    })
+    public Response verifyPaymentWithTelemetry(PaymentDetails paymentDetails) 
+        throws PaymentProcessingException {
+        
+        try {
+            // Generate a unique transaction ID for this verification
+            String transactionId = "TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            
+            // Use the new telemetry-enabled verification method
+            CompletionStage<String> result = paymentService.verifyPaymentWithTelemetry(paymentDetails, transactionId);
+            String verificationResult = result.toCompletableFuture().get();
+            
+            return Response.ok(verificationResult, MediaType.APPLICATION_JSON).build();
+            
+        } catch (Exception e) {
+            throw new PaymentProcessingException("Payment verification failed: " + e.getMessage());
         }
     }
 

@@ -112,7 +112,7 @@
                 <li><span class="method get">GET</span> /api/payment-config - Get current payment configuration</li>
                 <li><span class="method post">POST</span> /api/payment-config - Update payment configuration property</li>
                 <li><span class="method post">POST</span> /api/authorize - Process payment authorization (with retry)</li>
-                <li><span class="method post">POST</span> /api/verify - Verify payment transaction (aggressive retry)</li>
+                <li><span class="method post">POST</span> /api/verify - Verify payment transaction (with telemetry tracing)</li>
                 <li><span class="method post">POST</span> /api/capture - Capture payment (circuit breaker + timeout)</li>
                 <li><span class="method post">POST</span> /api/refund - Process payment refund (conservative retry)</li>
                 <li><span class="method post">POST</span> /api/payment-config/process-example - Example payment processing with config</li>
@@ -171,6 +171,49 @@
         </div>
 
         <div class="card">
+            <h2>MicroProfile Telemetry Features</h2>
+            <p>The Payment Service implements comprehensive distributed tracing with MicroProfile Telemetry:</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div style="background-color: #e8f0ff; padding: 15px; border-radius: 5px;">
+                    <h4 style="color: #2962ff; margin-top: 0;">🔍 Tracing Architecture</h4>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Implementation:</strong> OpenTelemetry API</li>
+                        <li><strong>Exporter:</strong> Zipkin integration</li>
+                        <li><strong>Service Name:</strong> payment-service</li>
+                        <li><strong>Trace Propagation:</strong> W3C format</li>
+                    </ul>
+                </div>
+                <div style="background-color: #fff0f7; padding: 15px; border-radius: 5px;">
+                    <h4 style="color: #c2185b; margin-top: 0;">📊 Span Hierarchy</h4>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Parent Spans:</strong> Payment operations</li>
+                        <li><strong>Child Spans:</strong> Validation, fraud, etc.</li>
+                        <li><strong>Propagation:</strong> Context propagation</li>
+                        <li><strong>Visualization:</strong> Zipkin dashboard</li>
+                    </ul>
+                </div>
+                <div style="background-color: #fffde7; padding: 15px; border-radius: 5px;">
+                    <h4 style="color: #f57f17; margin-top: 0;">📝 Span Attributes</h4>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Payment Amounts:</strong> Tracked on spans</li>
+                        <li><strong>Transaction IDs:</strong> Correlated across spans</li>
+                        <li><strong>Masked Card Data:</strong> Secure PII handling</li>
+                        <li><strong>Error States:</strong> Detailed error tracking</li>
+                    </ul>
+                </div>
+                <div style="background-color: #e0f7fa; padding: 15px; border-radius: 5px;">
+                    <h4 style="color: #00838f; margin-top: 0;">⏲️ Performance Metrics</h4>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Operation Timing:</strong> Detailed duration tracking</li>
+                        <li><strong>External Calls:</strong> Network latency monitoring</li>
+                        <li><strong>Processing Stages:</strong> Per-stage timing</li>
+                        <li><strong>Bottleneck Analysis:</strong> Visualization support</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
             <h2>Configuration Management</h2>
             <p>This service implements a custom MicroProfile ConfigSource that allows dynamic configuration updates:</p>
             <ul>
@@ -195,6 +238,19 @@
         </div>
         
         <div class="card">
+            <h2>Testing Telemetry</h2>
+            <p>Test the MicroProfile Telemetry features with these examples:</p>
+            <ul>
+                <li><strong>Successful Trace:</strong> <code>curl -X POST "http://localhost:9080/payment/api/verify?amount=500&cardNumber=4111111111111111&cardHolder=Jane+Doe&expiryDate=12/25"</code></li>
+                <li><strong>Fraud Detection:</strong> <code>curl -X POST "http://localhost:9080/payment/api/verify?amount=250&cardNumber=4111111111110000&cardHolder=John+Smith&expiryDate=01/26"</code></li>
+                <li><strong>Insufficient Funds:</strong> <code>curl -X POST "http://localhost:9080/payment/api/verify?amount=1500&cardNumber=5555555555554444&cardHolder=Alice+Johnson&expiryDate=03/24"</code></li>
+            </ul>
+            <p><strong>Run test script:</strong> <code>./test-telemetry.sh</code> - This script will run all examples and start a Zipkin container</p>
+            <p><strong>View traces:</strong> Open Zipkin at <a href="http://localhost:9411/zipkin/">http://localhost:9411/zipkin/</a> to see distributed traces</p>
+            <p><strong>Analyze traces:</strong> Look for parent-child span relationships, error spans, timing information, and custom attributes</p>
+        </div>
+        
+        <div class="card">
             <h2>Links</h2>
             <div class="links">
                 <a href="/payment/api/openapi-ui/">OpenAPI Documentation</a>
@@ -205,8 +261,8 @@
     </div>
     
     <footer>
-        <p>MicroProfile Config & Fault Tolerance Demo | Payment Service</p>
-        <p>Powered by Open Liberty, MicroProfile Config 3.0 & MicroProfile Fault Tolerance 4.0</p>
+        <p>MicroProfile Config, Fault Tolerance & Telemetry Demo | Payment Service</p>
+        <p>Powered by Open Liberty, MicroProfile 6.1 (Config 3.0, Fault Tolerance 4.0, Telemetry 1.1)</p>
     </footer>
 </body>
 </html>

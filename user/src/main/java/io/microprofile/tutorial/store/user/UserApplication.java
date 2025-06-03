@@ -5,9 +5,7 @@ import jakarta.ws.rs.core.Application;
 
 import org.eclipse.microprofile.auth.LoginConfig;
 import org.eclipse.microprofile.openapi.annotations.OpenAPIDefinition;
-import org.eclipse.microprofile.openapi.annotations.info.Contact;
 import org.eclipse.microprofile.openapi.annotations.info.Info;
-import org.eclipse.microprofile.openapi.annotations.info.License;
 import org.eclipse.microprofile.openapi.annotations.servers.Server;
 import org.eclipse.microprofile.openapi.annotations.enums.SecuritySchemeType;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme;
@@ -21,15 +19,7 @@ import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme;
     info = @Info(
         title = "User Management API",
         version = "1.0.0",
-        description = "REST API for managing user profiles and authentication",
-        contact = @Contact(
-            name = "MicroProfile Tutorial",
-            email = "support@example.com"
-        ),
-        license = @License(
-            name = "Apache 2.0",
-            url = "https://www.apache.org/licenses/LICENSE-2.0.html"
-        )
+        description = "REST API for managing user profiles and authentication"
     ),
     servers = {
         @Server(url = "/user", description = "User Management Service")

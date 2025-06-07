@@ -4,10 +4,15 @@ import io.microprofile.tutorial.store.inventory.entity.Inventory;
 import io.microprofile.tutorial.store.inventory.exception.InventoryConflictException;
 import io.microprofile.tutorial.store.inventory.exception.InventoryNotFoundException;
 import io.microprofile.tutorial.store.inventory.repository.InventoryRepository;
+import io.microprofile.tutorial.store.inventory.client.ProductServiceClient;
+import io.microprofile.tutorial.store.inventory.dto.Product;
+import io.microprofile.tutorial.store.inventory.dto.InventoryWithProductInfo;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -15,7 +20,10 @@ import java.util.stream.Collectors;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.rest.client.RestClientBuilder;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 /**
  * Service class for Inventory management operations.
@@ -28,6 +36,80 @@ public class InventoryService {
     @Inject
     private InventoryRepository inventoryRepository;
 
+    @Inject
+    @RestClient
+    private ProductServiceClient productServiceClient;
+
+    /**
+     * Checks if a product is available in the catalog service.
+     * This method demonstrates the use of RestClientBuilder for programmatic REST client creation.
+     * This is a lightweight check that returns only a boolean result.
+     *
+     * @param productId The product ID to check
+     * @return true if the product exists, false otherwise
+     */
+    public boolean isProductAvailable(Long productId) {
+        LOGGER.fine("Checking product availability for ID: " + productId);
+        
+        try {
+            // Demonstrate RestClientBuilder usage - build a REST client programmatically
+            URI catalogServiceUri = URI.create("http://localhost:5050/catalog/api");
+            
+            ProductServiceClient dynamicClient = RestClientBuilder.newBuilder()
+                    .baseUri(catalogServiceUri)
+                    .connectTimeout(5, TimeUnit.SECONDS)
+                    .readTimeout(10, TimeUnit.SECONDS)
+                    .build(ProductServiceClient.class);
+            
+            LOGGER.fine("Built dynamic REST client for catalog service at: " + catalogServiceUri);
+            
+            Product product = dynamicClient.getProductById(productId);
+            boolean available = product != null;
+            LOGGER.fine("Product " + productId + " availability check via RestClientBuilder: " + available);
+            return available;
+            
+        } catch (WebApplicationException e) {
+            if (e.getResponse().getStatus() == 404) {
+                LOGGER.fine("Product " + productId + " not found in catalog (via RestClientBuilder)");
+                return false;
+            }
+            LOGGER.warning("Error checking product availability for ID " + productId + " via RestClientBuilder: " + e.getMessage());
+            return false;
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Unexpected error checking product availability for ID " + productId + " via RestClientBuilder", e);
+            return false;
+        }
+    }
+
+    /**
+     * Validates that a product exists in the catalog service.
+     *
+     * @param productId The product ID to validate
+     * @return The product details if found
+     * @throws InventoryNotFoundException if the product is not found in the catalog
+     */
+    private Product validateProductExists(Long productId) {
+        LOGGER.fine("Validating product existence for ID: " + productId);
+        
+        try {
+            Product product = productServiceClient.getProductById(productId);
+            if (product == null) {
+                throw new InventoryNotFoundException("Product not found in catalog with ID: " + productId);
+            }
+            LOGGER.fine("Product validated successfully: " + product.getName());
+            return product;
+        } catch (WebApplicationException e) {
+            LOGGER.warning("Product validation failed for ID " + productId + ": " + e.getMessage());
+            if (e.getResponse().getStatus() == 404) {
+                throw new InventoryNotFoundException("Product not found in catalog with ID: " + productId);
+            }
+            throw new RuntimeException("Failed to validate product with catalog service: " + e.getMessage(), e);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Unexpected error validating product " + productId, e);
+            throw new RuntimeException("Failed to validate product with catalog service: " + e.getMessage(), e);
+        }
+    }
+
     /**
      * Creates a new inventory item.
      *
@@ -38,6 +120,10 @@ public class InventoryService {
     @Transactional
     public Inventory createInventory(Inventory inventory) {
         LOGGER.info("Creating inventory for product ID: " + inventory.getProductId());
+        
+        // Validate that the product exists in the catalog service
+        Product product = validateProductExists(inventory.getProductId());
+        LOGGER.info("Product validated: " + product.getName() + " (Price: $" + product.getPrice() + ")");
         
         // Check if product ID already exists
         Optional<Inventory> existingInventory = inventoryRepository.findByProductId(inventory.getProductId());
@@ -62,8 +148,13 @@ public class InventoryService {
     public List<Inventory> createBulkInventories(List<Inventory> inventories) {
         LOGGER.info("Creating bulk inventories: " + inventories.size() + " items");
         
-        // Validate for conflicts
+        // Validate products exist in catalog and check for conflicts
         for (Inventory inventory : inventories) {
+            // Validate product exists in catalog
+            Product product = validateProductExists(inventory.getProductId());
+            LOGGER.fine("Product validated for bulk create: " + product.getName() + " (ID: " + inventory.getProductId() + ")");
+            
+            // Check for existing inventory records
             Optional<Inventory> existingInventory = inventoryRepository.findByProductId(inventory.getProductId());
             if (existingInventory.isPresent()) {
                 LOGGER.warning("Conflict detected during bulk create for product ID: " + inventory.getProductId());
@@ -190,6 +281,10 @@ public class InventoryService {
     public Inventory updateInventory(Long id, Inventory inventory) {
         LOGGER.info("Updating inventory ID: " + id + " for product ID: " + inventory.getProductId());
         
+        // Validate that the product exists in the catalog service
+        Product product = validateProductExists(inventory.getProductId());
+        LOGGER.info("Product validated for update: " + product.getName() + " (ID: " + product.getId() + ")");
+        
         // Check if product ID exists in a different inventory record
         Optional<Inventory> existingInventoryWithProductId = inventoryRepository.findByProductId(inventory.getProductId());
         if (existingInventoryWithProductId.isPresent() && 
@@ -248,5 +343,150 @@ public class InventoryService {
                    " for product ID: " + productId + " (inventory ID: " + inventory.getInventoryId() + ")");
         
         return updated;
+    }
+
+    /**
+     * Gets product information for an inventory item.
+     *
+     * @param inventory The inventory item
+     * @return The product details
+     */
+    public Product getProductInfo(Inventory inventory) {
+        return validateProductExists(inventory.getProductId());
+    }
+
+    /**
+     * Gets inventory with enriched product information.
+     *
+     * @param inventoryId The inventory ID
+     * @return Inventory with product details
+     */
+    public InventoryWithProductInfo getInventoryWithProductInfo(Long inventoryId) {
+        Inventory inventory = getInventoryById(inventoryId);
+        Product product = validateProductExists(inventory.getProductId());
+        
+        return new InventoryWithProductInfo(inventory, product);
+    }
+
+    /**
+     * Gets all inventories with product information for a specific category.
+     *
+     * @param category The product category
+     * @return List of inventories for products in the specified category
+     */
+    public List<InventoryWithProductInfo> getInventoriesByCategory(String category) {
+        LOGGER.info("Getting inventories for category: " + category);
+        
+        try {
+            // Get products by category from catalog service
+            List<Product> productsInCategory = productServiceClient.getProductsByCategory(category);
+            
+            if (productsInCategory == null || productsInCategory.isEmpty()) {
+                LOGGER.info("No products found in category: " + category);
+                return new ArrayList<>();
+            }
+            
+            // Find inventories for these products
+            List<InventoryWithProductInfo> result = new ArrayList<>();
+            for (Product product : productsInCategory) {
+                try {
+                    Inventory inventory = inventoryRepository.findByProductId(product.getId()).orElse(null);
+                    if (inventory != null) {
+                        result.add(new InventoryWithProductInfo(inventory, product));
+                    }
+                } catch (Exception e) {
+                    LOGGER.warning("Error getting inventory for product " + product.getId() + ": " + e.getMessage());
+                }
+            }
+            
+            LOGGER.info("Found " + result.size() + " inventory items for category: " + category);
+            return result;
+            
+        } catch (WebApplicationException e) {
+            LOGGER.warning("Failed to get products by category from catalog service: " + e.getMessage());
+            throw new RuntimeException("Failed to retrieve products by category: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Reserves inventory for a product if it's available in the catalog.
+     * This method uses isProductAvailable for a lightweight check before reservation.
+     *
+     * @param productId The product ID
+     * @param quantityToReserve The quantity to reserve
+     * @return The updated inventory after reservation
+     * @throws InventoryNotFoundException if the inventory or product is not found
+     * @throws IllegalArgumentException if there's insufficient inventory
+     */
+    @Transactional
+    public Inventory reserveInventory(Long productId, int quantityToReserve) {
+        if (quantityToReserve <= 0) {
+            throw new IllegalArgumentException("Quantity to reserve must be positive");
+        }
+        
+        LOGGER.info("Attempting to reserve " + quantityToReserve + " units for product ID: " + productId);
+        
+        // Use isProductAvailable for a lightweight availability check
+        if (!isProductAvailable(productId)) {
+            LOGGER.warning("Cannot reserve inventory - product " + productId + " is not available in catalog");
+            throw new InventoryNotFoundException("Product is not available in catalog: " + productId);
+        }
+        
+        // Get the current inventory
+        Inventory inventory = getInventoryByProductId(productId);
+        
+        // Check if we have enough inventory to reserve
+        int availableQuantity = inventory.getQuantity() - inventory.getReservedQuantity();
+        if (availableQuantity < quantityToReserve) {
+            LOGGER.warning("Insufficient inventory to reserve " + quantityToReserve + 
+                          " units for product " + productId + ". Available: " + availableQuantity);
+            throw new IllegalArgumentException("Insufficient inventory available. Requested: " + 
+                                             quantityToReserve + ", Available: " + availableQuantity);
+        }
+        
+        // Update reserved quantity
+        inventory.setReservedQuantity(inventory.getReservedQuantity() + quantityToReserve);
+        
+        Inventory updated = inventoryRepository.save(inventory);
+        LOGGER.info("Reserved " + quantityToReserve + " units for product " + productId + 
+                   ". New reserved quantity: " + updated.getReservedQuantity());
+        
+        return updated;
+    }
+
+    /**
+     * Demonstrates advanced RestClientBuilder usage with custom configuration.
+     * This method builds a REST client with specific timeout and error handling settings.
+     *
+     * @param productId The product ID to check
+     * @return Product details if found, null otherwise
+     */
+    public Product getProductWithCustomClient(Long productId) {
+        LOGGER.info("Getting product details using custom RestClientBuilder for ID: " + productId);
+        
+        try {
+            // Build REST client with custom configuration
+            URI catalogServiceUri = URI.create("http://localhost:5050/catalog/api");
+            
+            ProductServiceClient customClient = RestClientBuilder.newBuilder()
+                    .baseUri(catalogServiceUri)
+                    .connectTimeout(3, TimeUnit.SECONDS)      // Custom connect timeout
+                    .readTimeout(8, TimeUnit.SECONDS)         // Custom read timeout
+                    .build(ProductServiceClient.class);
+            
+            LOGGER.info("Built custom REST client with 3s connect and 8s read timeout");
+            
+            Product product = customClient.getProductById(productId);
+            LOGGER.info("Retrieved product via custom client: " + (product != null ? product.getName() : "null"));
+            return product;
+            
+        } catch (WebApplicationException e) {
+            LOGGER.warning("WebApplicationException from custom client for product " + productId + 
+                          ": Status=" + e.getResponse().getStatus() + ", Message=" + e.getMessage());
+            return null;
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Unexpected error from custom REST client for product " + productId, e);
+            return null;
+        }
     }
 }

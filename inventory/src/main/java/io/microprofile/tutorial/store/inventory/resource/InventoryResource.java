@@ -2,6 +2,7 @@ package io.microprofile.tutorial.store.inventory.resource;
 
 import io.microprofile.tutorial.store.inventory.entity.Inventory;
 import io.microprofile.tutorial.store.inventory.service.InventoryService;
+import io.microprofile.tutorial.store.inventory.dto.Product;
 
 import java.net.URI;
 import java.util.List;
@@ -31,7 +32,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 @RequestScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-@Tag(name = "Inventory Resource", description = "Inventory management operations")
+@Tag(name = "Inventory", description = "Operations related to product inventory management")
 public class InventoryResource {
 
     @Inject
@@ -203,5 +204,63 @@ public class InventoryResource {
         @Parameter(description = "New quantity", required = true)
         @PathParam("quantity") int quantity) {
         return inventoryService.updateQuantity(productId, quantity);
+    }
+
+    @PATCH
+    @Path("/product/{productId}/reserve/{quantity}")
+    @Operation(summary = "Reserve inventory for a product", 
+               description = "Reserves the specified quantity of inventory for a product if it's available in the catalog")
+    @APIResponse(
+        responseCode = "200",
+        description = "Inventory reserved successfully",
+        content = @Content(
+            mediaType = MediaType.APPLICATION_JSON,
+            schema = @Schema(implementation = Inventory.class)
+        )
+    )
+    @APIResponse(
+        responseCode = "400",
+        description = "Invalid quantity or insufficient inventory available"
+    )
+    @APIResponse(
+        responseCode = "404",
+        description = "Product not found in catalog or inventory not found"
+    )
+    public Inventory reserveInventory(
+        @Parameter(description = "Product ID", required = true)
+        @PathParam("productId") Long productId,
+        @Parameter(description = "Quantity to reserve", required = true)
+        @PathParam("quantity") int quantity) {
+        return inventoryService.reserveInventory(productId, quantity);
+    }
+
+    @GET
+    @Path("/product-info/{productId}")
+    @Operation(summary = "Get product information using custom RestClientBuilder", 
+               description = "Demonstrates advanced RestClientBuilder usage with custom timeout configuration")
+    @APIResponse(
+        responseCode = "200",
+        description = "Product information retrieved successfully",
+        content = @Content(
+            mediaType = MediaType.APPLICATION_JSON,
+            schema = @Schema(implementation = Product.class)
+        )
+    )
+    @APIResponse(
+        responseCode = "404",
+        description = "Product not found"
+    )
+    public Response getProductInfo(
+        @Parameter(description = "Product ID", required = true)
+        @PathParam("productId") Long productId) {
+        
+        Product product = inventoryService.getProductWithCustomClient(productId);
+        if (product != null) {
+            return Response.ok(product).build();
+        } else {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("{\"message\": \"Product not found\"}")
+                    .build();
+        }
     }
 }

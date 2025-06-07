@@ -39,4 +39,13 @@ public class Inventory {
     @NotNull(message = "Quantity cannot be null")
     @Min(value = 0, message = "Quantity must be greater than or equal to 0")
     private Integer quantity;
+
+    /**
+     * Quantity of the product that is reserved (e.g., in pending orders).
+     * Must not be null and must be non-negative.
+     */
+    @NotNull(message = "Reserved quantity cannot be null")
+    @Min(value = 0, message = "Reserved quantity must be greater than or equal to 0")
+    @Builder.Default
+    private Integer reservedQuantity = 0;
 }

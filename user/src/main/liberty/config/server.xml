@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<server description="User Management Microservice">
+
+    <!-- Enable features -->
+    <featureManager>
+        <platform>jakartaee-10.0</platform>
+        <platform>microProfile-6.1</platform>
+        <!-- Jakarta EE 10.0 features -->
+        <feature>cdi</feature>
+        <feature>jsonp</feature>
+        <feature>jsonb</feature>
+        <feature>restfulWS</feature>
+        <feature>beanValidation</feature>
+        <!-- MicroProfile 6.1 features -->
+        <feature>mpOpenAPI</feature>
+        <feature>mpJwt</feature>
+    </featureManager>
+
+    <!-- Configure HTTP endpoint -->
+    <httpEndpoint id="defaultHttpEndpoint"
+                  host="*"
+                  httpPort="6050"
+                  httpsPort="6051"/>
+
+    <!-- Define application -->
+    <webApplication location="user.war" contextRoot="/user">
+        <!-- Enable OpenAPI endpoint -->
+        <classloader apiTypeVisibility="+third-party"/>
+    </webApplication>
+
+    <!-- Configure variables -->
+    <variable name="default.http.port" defaultValue="6050"/>
+    <variable name="default.https.port" defaultValue="6051"/>
+    <variable name="app.context.root" defaultValue="/user"/>
+    
+    <!-- Logging focus specifically on JWT processing with clear markers -->
+    <logging traceSpecification="com.ibm.ws.security.mp.jwt.*=all:org.jose4j.*=ALL" 
+             traceFileName="jwt-trace.log"
+             maxFiles="3" 
+             maxFileSize="20" />
+</server>

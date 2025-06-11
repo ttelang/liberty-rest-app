@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server description="Shipment Management Microservice">
+
+    <!-- Enable features -->
+    <featureManager>
+        <!-- Jakarta EE 10.0 features -->
+        <feature>cdi-4.0</feature>
+        <feature>jsonp-2.1</feature>
+        <feature>jsonb-3.0</feature>
+        <feature>restfulWS-3.1</feature>
+        <feature>beanValidation-3.0</feature>
+        <!-- MicroProfile 6.1 features -->
+        <feature>mpOpenAPI-3.1</feature>
+    </featureManager>
+
+    <!-- Configure HTTP endpoint -->
+    <httpEndpoint id="defaultHttpEndpoint"
+                  host="*"
+                  httpPort="7050"
+                  httpsPort="7051"/>
+
+    <!-- Define application -->
+    <webApplication location="shipment.war" contextRoot="/shipment">
+        <!-- Enable OpenAPI endpoint -->
+        <classloader apiTypeVisibility="+third-party"/>
+    </webApplication>
+
+    <!-- Configure logging -->
+    <logging traceSpecification="com.ibm.ws.microprofile.*=all:io.microprofile.tutorial.store.inventory.*=all"
+             consoleLogLevel="INFO"
+             consoleFormat="json"
+             messageFormat="ENHANCED_JSON"/>
+
+    <!-- Configure variables -->
+    <variable name="default.http.port" defaultValue="7050"/>
+    <variable name="default.https.port" defaultValue="7051"/>
+    <variable name="app.context.root" defaultValue="/shipment"/>
+
+    <!-- Allow API documentation to be accessible without authentication -->
+    <cors domain="/openapi"
+          allowedOrigins="*"
+          allowedMethods="GET, OPTIONS"
+          allowedHeaders="Content-Type"
+          allowCredentials="true"
+          maxAge="3600"/>
+
+    <!-- Development mode configuration -->
+    <!-- Uncomment for development
+    <applicationMonitor updateTrigger="mbean"/>
+    <keyStore password="Liberty"/>
+    -->
+</server>

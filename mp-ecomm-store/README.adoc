@@ -8,6 +8,28 @@
 
 This project demonstrates a MicroProfile-based e-commerce microservice running on Open Liberty. It provides REST endpoints for product management and showcases Jakarta EE 10 and MicroProfile 6.1 features in a practical application.
 
+== Getting Started
+
+=== Checking Out the Code
+
+To get the code from the MicroProfile tutorial branch:
+
+[source,bash]
+----
+# Fetch all remote branches
+git fetch origin
+
+# Checkout the microprofile tutorial branch
+git checkout microprofile/microprofile-tutorial
+
+# Pull the latest changes
+git pull origin microprofile/microprofile-tutorial
+
+# Navigate to the code folder
+cd code/
+
+----
+
 == Prerequisites
 
 * JDK 17
@@ -129,7 +151,3 @@ Current features:
 
 * Basic product listing functionality
 * JSON-B serialization
-
-== License
-
-This project is licensed under the MIT License.

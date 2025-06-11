@@ -1,13 +1,10 @@
-= Liberty REST Application
+= MicroProfile Tutorial Sample Code
 :toc:
 :icons: font
 :source-highlighter: highlight.js
 :experimental:
 
-This project demonstrates REST applications using MicroProfile and Jakarta EE. It contains multiple sub-projects:
-
-* `hello-world`: A simple Hello World REST application
-* `mp-ecomm-store`: A e-commerce store microservice with products API
+This project demonstrates REST applications using MicroProfile and Jakarta EE. 
 
 == Prerequisites
 
@@ -20,7 +17,6 @@ This project includes a GitHub Codespace configuration with:
 
 * JDK 17 via SDKMAN
 * Maven build tools
-* VS Code extensions for Java, MicroProfile, and GitHub Copilot
 
 === Switching Java Versions
 
@@ -97,15 +93,10 @@ mvn liberty:dev
 
 === Port Conflicts
 
-Both applications are configured to use different ports by default:
-
-* The `hello-world` application uses port 5050
-* The `mp-ecomm-store` application uses port 5052
-
 If you encounter port conflicts (HTTP 500 errors or "Address already in use" messages), verify:
 
 1. No other applications are using the required ports
-2. Only one Liberty server is trying to use each port
+2. Only one server is trying to use each port
 3. The server.xml files have distinct port configurations:
 
 .hello-world/src/main/liberty/config/server.xml

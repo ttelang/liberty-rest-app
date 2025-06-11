@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server description="Order Management Microservice">
+
+    <!-- Enable features -->
+    <featureManager>
+        <platform>jakartaee-10.0</platform>
+        <platform>microProfile-6.1</platform>
+        <!-- Jakarta EE 10.0 features -->
+        <feature>cdi</feature>
+        <feature>jsonp</feature>
+        <feature>jsonb</feature>
+        <feature>restfulWS</feature>
+        <feature>beanValidation</feature>
+        <!-- MicroProfile 6.1 features -->
+        <feature>mpOpenAPI</feature>
+        <feature>mpJwt</feature>
+    </featureManager>
+
+    <!-- Configure HTTP endpoint -->
+    <httpEndpoint id="defaultHttpEndpoint"
+                  host="*"
+                  httpPort="8050"
+                  httpsPort="8051"/>
+
+    <!-- Define application -->
+    <webApplication location="order.war" contextRoot="/order">
+        <!-- Enable OpenAPI endpoint -->
+        <classloader apiTypeVisibility="+third-party"/>
+        <!-- Security settings -->
+        <application-bnd>
+            <security-role name="user">
+                <group name="user"/>
+            </security-role>
+            <security-role name="admin">
+                <group name="admin"/>
+            </security-role>
+        </application-bnd>
+    </webApplication>
+
+    <!-- CORS settings for API endpoints -->
+    <cors domain="/order"
+          allowedOrigins="*"
+          allowedMethods="GET, POST, PUT, DELETE, OPTIONS"
+          allowedHeaders="Origin, Content-Type, Authorization"
+          maxAge="3600" />
+
+    <!-- Logging focus specifically on JWT processing with clear markers -->
+    <logging traceSpecification="com.ibm.ws.security.mp.jwt.*=all:org.jose4j.*=ALL:com.ibm.ws.security.*=all" 
+             traceFileName="jwt-trace.log"
+             maxFiles="3" 
+             maxFileSize="20" />
+             
+    <!-- JWT Authentication configuration -->
+    <mpJwt id="orderJwt" 
+           issuer="mp-ecomm-store"
+           publicKeyLocation="${server.config.dir}/publicKey.pem"
+           userNameAttribute="upn"
+           groupNameAttribute="groups"
+           authFilterRef="mpJwtAuthFilter" 
+           sslRef="defaultSSLConfig"
+           uniqueID="orderMpJwt"
+           jwksUri=""
+           keyManagementKeyAlias=""
+           authorizationHeaderScheme="Bearer"
+           audiences=""
+           keyName="orderJwt"
+           clockSkew="5m"
+           expiryTolerance="30s"
+           claimDialect="ALL_CLAIMS"
+           inboundPropagation="supported"
+           tokenReuse="false" />
+           
+    <!-- JWT Authorization filter -->
+    <authFilter id="mpJwtAuthFilter">
+        <requestUrl id="myRequestUrl" urlPattern="/order/api/*" />
+    </authFilter>
+</server>

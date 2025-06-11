@@ -16,15 +16,4 @@
     <httpEndpoint httpPort="${default.http.port}" httpsPort="${default.https.port}"
                   id="defaultHttpEndpoint" host="*" />
     <webApplication location="payment.war" contextRoot="${app.context.root}"/>
-    <logging traceSpecification="*=info:com.ibm.ws.webcontainer*=all:com.ibm.ws.jaxrs*=all:com.ibm.ws.app.manager*=all:com.ibm.ws.microprofile.health.*=all:io.microprofile.tutorial.store.product.*=all:io.microprofile.tutorial.store.payment.*=all" />
-    
-    <!-- MicroProfile Telemetry Configuration -->
-    <mpTelemetry serviceName="payment-service">
-        <otlpExporter endpoint="http://localhost:4318" />
-        <resource>
-            <attribute name="service.name" value="payment-service" />
-            <attribute name="service.version" value="1.0.0" />
-            <attribute name="deployment.environment" value="development" />
-        </resource>
-    </mpTelemetry>
 </server>

@@ -217,16 +217,6 @@ Enable MicroProfile Telemetry in your Liberty server configuration:
         <feature>mpTelemetry</feature>
         <!-- Other features -->
     </featureManager>
-
-    <!-- MicroProfile Telemetry Configuration -->
-    <mpTelemetry serviceName="payment-service">
-        <otlpExporter endpoint="http://localhost:4318/v1/traces" />
-        <resource>
-            <attribute name="service.name" value="payment-service" />
-            <attribute name="service.version" value="1.0.0" />
-            <attribute name="deployment.environment" value="development" />
-        </resource>
-    </mpTelemetry>
 </server>
 ----
 
